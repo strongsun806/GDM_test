@@ -87,7 +87,25 @@ SYSTEM_INSTRUCTION = """당신은 구글 딥마인드 Gemini 기반의 똑똑하
 3. 예산 현실성 반영:
    - 숙박, 식비, 교통, 관광/체험, 비상금 카테고리별로 현지 물가를 반영해 총 예산을 초과하지 않도록 합리적으로 배분합니다.
 4. 대화형 피드백 반영 (Human-in-the-Loop):
-   - 친구들의 피드백(예: 우천 대비 실내 코스 변경, 늦잠 모드, 특정 맛집 추가 등)을 받으면 변경 사항을 친절하게 요약하고 업데이트된 전체 일정표를 최신 상태로 재출력합니다.
+    - 친구들의 피드백(예: 우천 대비 실내 코스 변경, 늦잠 모드, 특정 맛집 추가 등)을 받으면 변경 사항을 친절하게 요약하고 업데이트된 전체 일정표를 최신 상태로 재출력합니다.
+5. [인터랙티브 지도 동선 메타데이터 블록 필수 첨부]:
+   - 일정표 맨 마지막에, 대시보드 지도에서 방문지 마커(동선 번호순)와 이동 경로(Polyline)를 실시간 렌더링할 수 있도록 각 일차별 스팟의 정확한 위도(lat)와 경도(lng)를 포함한 JSON 코드 블록을 반드시 작성하세요.
+   - 포맷:
+```json:itinerary-geo
+{
+  "destination": "[여행지]",
+  "days": [
+    {
+      "day": 1,
+      "title": "[Day 1 주요 테마 및 방문 구역]",
+      "places": [
+        {"name": "방문지1", "lat": 35.1234, "lng": 139.1234, "time": "09:30", "desc": "세부 활동 요약"},
+        {"name": "방문지2", "lat": 35.1250, "lng": 139.1280, "time": "12:00", "desc": "식사 및 휴식"}
+      ]
+    }
+  ]
+}
+```
 
 [출력 양식: 1차 종합 일정표 생성 시]
 # 🌿 [여행지] 맞춤 여행 일정표
@@ -120,6 +138,8 @@ SYSTEM_INSTRUCTION = """당신은 구글 딥마인드 Gemini 기반의 똑똑하
 - **돌발 상황 대비 플랜 B**: (비가 오거나 휴관일 경우 대체 스팟)
 - **사전 준비 필수 체크**: (사전 예약 권장 스팟, 교통 패스 추천 등)
 
+(맨 마지막에 상기 안내된 ```json:itinerary-geo 코드 블록 필히 포함)
+
 [출력 양식: 피드백 수정 시]
 # 🔄 피드백 반영 맞춤 여행 일정표
 
@@ -129,17 +149,17 @@ SYSTEM_INSTRUCTION = """당신은 구글 딥마인드 Gemini 기반의 똑똑하
 - **예산 및 일정 영향도**: [비용 변동 및 피로도 분석]
 
 ## 🗺️ [업데이트된 최신 전체 일정표]
-(피드백이 완벽히 반영된 최신 전체 여행 일정표를 깔끔하게 재출력, 예약 링크 유지)
+(피드백이 완벽히 반영된 최신 전체 여행 일정표를 깔끔하게 재출력, 예약 링크 및 맨 끝 ```json:itinerary-geo 블록 유지)
 """
 
 
 # =====================================================================
 # Helper Functions: Gemini Client & PDF Generation
 # =====================================================================
-def get_gemini_client(api_key: str):
-    effective_key = api_key.strip() if api_key and api_key.strip() else os.environ.get("GEMINI_API_KEY", "")
+def get_gemini_client(api_key: str = ""):
+    effective_key = api_key.strip() if api_key and api_key.strip() else os.environ.get("GEMINI_API_KEY", "").strip()
     if not effective_key:
-        raise ValueError("Google Gemini API Key가 설정되지 않았습니다. 상단 우측 ⚙️ 설정에서 API Key를 입력하거나 환경변수 GEMINI_API_KEY를 등록해 주세요.")
+        raise ValueError("Google Gemini API Key가 설정되지 않았습니다. 상단 우측 ⚙️ 설정에서 API Key를 입력하거나 운영체제 환경변수 GEMINI_API_KEY를 등록해 주세요.")
     return genai.Client(api_key=effective_key)
 
 
@@ -154,6 +174,9 @@ def is_quota_or_notfound_error(e: Exception) -> bool:
 def generate_pdf_from_markdown(markdown_text: str, destination: str) -> str:
     if not REPORTLAB_AVAILABLE:
         raise RuntimeError("ReportLab 라이브러리가 필요합니다. pip install reportlab")
+
+    # Clean out JSON geo metadata block so it doesn't clutter the PDF report
+    markdown_text = re.sub(r'```json:itinerary-geo[\s\S]*?```', '', markdown_text).strip()
 
     temp_dir = tempfile.gettempdir()
     clean_dest = re.sub(r'[^\w\s-]', '', destination).strip() or "Travel"
@@ -391,6 +414,7 @@ async def api_feedback(request: Request):
    - 동선 충돌 해결 및 시간/예산 영향도 분석
 2. ## 🗺️ [업데이트된 최신 종합 청사진]:
    - 피드백이 완벽히 반영된 최신 전체 여행 일정표 (기존 마크다운 및 [📍 구글 지도], [🍽️ 맛집/예약] 링크 유지)
+   - 맨 마지막에 최신 동선 좌표가 반영된 ```json:itinerary-geo 코드 블록 필히 포함
 """
         response = chat.send_message(refine_prompt)
         itinerary = response.text or "업데이트에 실패했습니다."
@@ -442,6 +466,7 @@ with gr.Blocks(title="Autonomous Travel Architect (Gradio View)") as demo:
             g_dest = gr.Textbox(label="여행지", value="일본 도쿄")
             g_dur = gr.Textbox(label="일정", value="3박 4일")
             g_budget = gr.Textbox(label="예산", value="1인당 100만원")
+            g_api_key = gr.Textbox(label="Google Gemini API Key", value=os.environ.get("GEMINI_API_KEY", ""), placeholder="GEMINI_API_KEY 환경변수 미설정 시 직접 입력", type="password")
             g_styles = gr.CheckboxGroup(
                 choices=["힐링/카페", "미식/핫플", "문화/건축", "쇼핑/빈티지", "자연/풍경", "액티비티"],
                 value=["힐링/카페", "미식/핫플"],
@@ -451,13 +476,27 @@ with gr.Blocks(title="Autonomous Travel Architect (Gradio View)") as demo:
         with gr.Column(scale=2):
             g_out = gr.Markdown("결과가 여기에 표시됩니다.")
 
-    def gradio_generate(dest, dur, budget, styles):
+    def gradio_generate(dest, dur, budget, api_key, styles):
         session = ACTIVE_SESSIONS.get("default")
         if session and session.get("itinerary"):
             return session["itinerary"]
-        return f"### {dest} ({dur}) 맞춤 일정\n메인 웹앱(http://localhost:7860/)에서 3D 비주얼과 원클릭 예약 링크를 확인하세요!"
+        try:
+            client = get_gemini_client(api_key)
+            prompt = f"{dest} ({dur}, 예산: {budget}, 스타일: {', '.join(styles)}) 맞춤 여행 일정을 작성해 주세요."
+            config = types.GenerateContentConfig(
+                system_instruction=SYSTEM_INSTRUCTION,
+                temperature=0.7,
+            )
+            response = client.models.generate_content(
+                model="gemini-3.8-flash",
+                contents=prompt,
+                config=config
+            )
+            return response.text or "일정 생성 완료"
+        except Exception as e:
+            return f"### {dest} ({dur}) 맞춤 일정\n메인 웹앱(http://localhost:7860/)에서 3D 비주얼과 원클릭 예약 링크를 확인하세요!"
 
-    g_btn.click(fn=gradio_generate, inputs=[g_dest, g_dur, g_budget, g_styles], outputs=[g_out])
+    g_btn.click(fn=gradio_generate, inputs=[g_dest, g_dur, g_budget, g_api_key, g_styles], outputs=[g_out])
 
 # Mount Gradio on FastAPI app at path /gradio
 app = gr.mount_gradio_app(app, demo, path="/gradio")

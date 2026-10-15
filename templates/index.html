@@ -14,6 +14,9 @@
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <!-- Canvas Confetti -->
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
+    <!-- Leaflet CSS & JS for Interactive Route Maps -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
         tailwind.config = {
             darkMode: 'class',
@@ -188,6 +191,93 @@
         }
         .prose-blueprint li {
             margin: 0.3rem 0;
+        }
+
+        /* Day Selector Tabs Styling */
+        .day-tab-btn {
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            border: 1px solid rgba(16, 185, 129, 0.2);
+            background: #FFFFFF;
+            color: #475569;
+        }
+        .day-tab-btn:hover {
+            border-color: #10B981;
+            color: #065F46;
+            background: #F0FDF4;
+            transform: translateY(-1px);
+        }
+        .day-tab-btn.active {
+            background: linear-gradient(135deg, #059669 0%, #10B981 100%) !important;
+            border-color: #059669 !important;
+            color: #FFFFFF !important;
+            box-shadow: 0 4px 14px -2px rgba(16, 185, 129, 0.4);
+            font-weight: 700;
+        }
+
+        /* Leaflet Map Custom Styling */
+        .leaflet-container {
+            font-family: 'Pretendard', sans-serif !important;
+            border-radius: 1rem;
+        }
+        .route-marker-pin {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #059669 0%, #10B981 100%);
+            border: 2.5px solid #FFFFFF;
+            color: #FFFFFF;
+            font-weight: 800;
+            font-size: 13px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 12px rgba(5, 150, 105, 0.45);
+            position: relative;
+            cursor: pointer;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        .route-marker-pin:hover {
+            transform: scale(1.22);
+            box-shadow: 0 6px 16px rgba(5, 150, 105, 0.6);
+            z-index: 1000 !important;
+        }
+        .route-marker-pin::after {
+            content: '';
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            border: 2px solid #10B981;
+            animation: markerPulse 2.2s infinite cubic-bezier(0.4, 0, 0.6, 1);
+            pointer-events: none;
+        }
+        @keyframes markerPulse {
+            0% { transform: scale(1); opacity: 0.8; }
+            100% { transform: scale(1.9); opacity: 0; }
+        }
+
+        /* Day-specific marker colors for multi-day view */
+        .route-marker-pin.day-color-1 { background: linear-gradient(135deg, #059669 0%, #10B981 100%); }
+        .route-marker-pin.day-color-2 { background: linear-gradient(135deg, #0284C7 0%, #38BDF8 100%); }
+        .route-marker-pin.day-color-3 { background: linear-gradient(135deg, #7C3AED 0%, #A855F7 100%); }
+        .route-marker-pin.day-color-4 { background: linear-gradient(135deg, #D97706 0%, #FBBF24 100%); }
+        .route-marker-pin.day-color-5 { background: linear-gradient(135deg, #E11D48 0%, #FB7185 100%); }
+
+        /* Custom Popup Styling */
+        .custom-map-popup .leaflet-popup-content-wrapper {
+            background: rgba(255, 255, 255, 0.96) !important;
+            backdrop-filter: blur(10px);
+            border: 1px solid #D1FAE5;
+            border-radius: 1rem !important;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.12);
+            padding: 2px;
+        }
+        .custom-map-popup .leaflet-popup-tip {
+            background: #FFFFFF !important;
+        }
+        .custom-map-popup .leaflet-popup-content {
+            margin: 10px 14px !important;
+            line-height: 1.45;
         }
     </style>
 </head>
@@ -600,19 +690,101 @@
                     </div>
                 </div>
 
-                <!-- Main Blueprint Content Renderer Card -->
-                <div class="glass-panel rounded-3xl p-6 lg:p-8 border border-emerald-100/90 shadow-sm">
-                    <div id="blueprint-content-area" class="prose-blueprint">
-                        <!-- Populated dynamically via JS marked.parse -->
-                        <div class="text-center py-16 space-y-3">
-                            <div class="text-4xl">🗺️</div>
-                            <div class="text-lg font-bold text-slate-800">아직 생성된 일정이 없습니다.</div>
-                            <p class="text-xs text-slate-500">1단계 '여행 플래닝'에서 여행 정보를 입력하고 일정 생성을 시작해 보세요.</p>
-                            <button onclick="switchTab('studio')" class="mt-2 px-5 py-2.5 rounded-xl text-xs font-bold bg-emerald-600 text-white hover:bg-emerald-500 transition shadow-sm">
-                                여행 플래닝으로 이동 ➔
-                            </button>
+                <!-- Day Selection Bar (1일차, 2일차, 3일차 차수별 선택 탭) -->
+                <div id="day-selector-card" class="glass-panel rounded-2xl p-3.5 border border-emerald-100/90 shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                    <div class="flex items-center gap-2 overflow-x-auto w-full sm:w-auto py-1 scrollbar-none" id="day-tabs-container">
+                        <button type="button" onclick="switchDayView('all')" id="day-tab-btn-all" class="day-tab-btn active px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap flex items-center gap-1.5 shadow-sm">
+                            <span>🌐</span>
+                            <span>전체 일정 보기</span>
+                        </button>
+                        <!-- Dynamic Day buttons generated via JS -->
+                    </div>
+                    <div class="flex items-center gap-2 text-xs text-slate-500 shrink-0 self-end sm:self-auto">
+                        <span class="inline-flex items-center gap-1.5 bg-emerald-50 text-emerald-800 px-3 py-1.5 rounded-xl font-bold border border-emerald-200/80 shadow-xs">
+                            <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                            <span id="active-day-label">전체 일정 (종합 뷰)</span>
+                        </span>
+                    </div>
+                </div>
+
+                <!-- Main Content & Interactive Route Map (Side-by-Side 2-Column Grid) -->
+                <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+                    
+                    <!-- Left: Day Itinerary Content Area (7 cols) -->
+                    <div class="lg:col-span-7 space-y-4">
+                        <div class="glass-panel rounded-3xl p-6 lg:p-7 border border-emerald-100/90 shadow-sm">
+                            
+                            <!-- Day View Header Bar -->
+                            <div id="day-view-header" class="mb-5 pb-4 border-b border-slate-100 flex items-center justify-between">
+                                <div class="space-y-0.5">
+                                    <div class="text-[11px] font-bold text-emerald-600 tracking-wide uppercase" id="day-header-badge">Overall Itinerary</div>
+                                    <h3 class="text-xl lg:text-2xl font-extrabold text-slate-800" id="day-header-title">🌿 우리들의 맞춤 여행 일정표</h3>
+                                </div>
+                                <span class="text-xs font-bold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-100 shrink-0" id="day-spot-count">
+                                    원클릭 예약 & 길찾기 연동
+                                </span>
+                            </div>
+
+                            <!-- Markdown Renderer Container -->
+                            <div id="blueprint-content-area" class="prose-blueprint min-h-[300px]">
+                                <div class="text-center py-16 space-y-3">
+                                    <div class="text-4xl">🗺️</div>
+                                    <div class="text-lg font-bold text-slate-800">아직 생성된 일정이 없습니다.</div>
+                                    <p class="text-xs text-slate-500">1단계 '여행 플래닝'에서 여행 정보를 입력하고 일정 생성을 시작해 보세요.</p>
+                                    <button onclick="switchTab('studio')" class="mt-2 px-5 py-2.5 rounded-xl text-xs font-bold bg-emerald-600 text-white hover:bg-emerald-500 transition shadow-sm">
+                                        여행 플래닝으로 이동 ➔
+                                    </button>
+                                </div>
+                            </div>
                         </div>
                     </div>
+
+                    <!-- Right: Interactive Route Map & Spot Navigation (5 cols, Sticky) -->
+                    <div class="lg:col-span-5 space-y-4 lg:sticky lg:top-24">
+                        <div class="glass-panel rounded-3xl p-5 lg:p-6 border border-emerald-100/90 shadow-sm space-y-4">
+                            
+                            <!-- Map Card Header -->
+                            <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+                                <div class="flex items-center gap-2">
+                                    <span class="w-8 h-8 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center text-sm font-bold shadow-xs">🗺️</span>
+                                    <div>
+                                        <h4 class="text-sm font-bold text-slate-800" id="map-card-title">추천 여행 동선 지도</h4>
+                                        <p class="text-[11px] text-slate-400" id="map-card-subtitle">방문 순서대로 최단 경로를 연결했습니다</p>
+                                    </div>
+                                </div>
+                                <button type="button" id="btn-open-google-route" onclick="openGoogleMapsRoute()"
+                                    class="text-[11px] font-bold text-emerald-700 hover:text-white hover:bg-emerald-600 bg-emerald-50 px-3 py-1.5 rounded-xl border border-emerald-200 transition flex items-center gap-1 shadow-xs" title="구글 지도에서 전체 경로 열기">
+                                    <span>구글 지도 길찾기 ↗</span>
+                                </button>
+                            </div>
+
+                            <!-- Leaflet Map Container -->
+                            <div class="relative w-full h-[460px] rounded-2xl overflow-hidden border border-emerald-150 shadow-inner bg-slate-100">
+                                <div id="route-map" class="w-full h-full z-10"></div>
+                                
+                                <!-- Map Overlay Badge (Total Spots & Status) -->
+                                <div class="absolute bottom-3 left-3 z-[1000] bg-white/95 backdrop-blur-md px-3 py-1.5 rounded-xl border border-slate-200 text-[11px] font-semibold text-slate-700 shadow-md flex items-center gap-2">
+                                    <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                                    <span id="map-spots-summary">동선 지도 로드 대기 중</span>
+                                </div>
+                            </div>
+
+                            <!-- Route Sequence Timeline Strip (동선 순서 칩스) -->
+                            <div class="space-y-1.5 pt-1">
+                                <div class="flex items-center justify-between text-[11px] font-bold text-slate-500">
+                                    <span class="flex items-center gap-1">
+                                        <span class="text-emerald-600">📍</span> 방문 순서 및 코스
+                                    </span>
+                                    <span class="text-[10px] text-slate-400 font-normal">스팟 클릭 시 지도 이동</span>
+                                </div>
+                                <div id="route-steps-chips" class="flex items-center gap-1.5 overflow-x-auto py-1 max-w-full text-xs scrollbar-none">
+                                    <span class="text-xs text-slate-400 py-1">일정이 생성되면 방문 순서가 표시됩니다.</span>
+                                </div>
+                            </div>
+
+                        </div>
+                    </div>
+
                 </div>
 
                 <!-- Thinking Process Expandable Card -->
@@ -833,7 +1005,7 @@
                 <div class="space-y-1">
                     <label class="text-xs font-bold text-slate-700">Google Gemini API Key</label>
                     <div class="relative">
-                        <input type="password" id="modal-api-key" placeholder="AIzaSy..." 
+                        <input type="password" id="modal-api-key" placeholder="AIzaSy... (미입력 시 서버 환경변수 사용)" 
                             class="glass-input w-full px-3 py-2.5 rounded-xl text-xs pr-10 font-mono" />
                         <button type="button" onclick="toggleApiKeyVisibility()" class="absolute right-3 top-2.5 text-slate-400 hover:text-slate-600 text-xs">👁️</button>
                     </div>
@@ -1030,6 +1202,11 @@
     let currentBlueprintMarkdown = "";
     let currentDestination = "일본 도쿄";
     let selectedFile = null;
+    let currentParsedItinerary = null;
+    let currentActiveDay = 'all';
+    let leafletMap = null;
+    let mapLayerGroup = null;
+    let currentMarkers = [];
 
     // Quick chip helpers
     function setDest(dest) {
@@ -1130,6 +1307,13 @@
         if (activeNavBtn) {
             activeNavBtn.classList.remove('text-slate-600');
             activeNavBtn.classList.add('text-emerald-800', 'bg-white', 'shadow-sm', 'border', 'border-emerald-200/80');
+        }
+
+        // When switching to blueprint tab, ensure leaflet map calculates size properly
+        if (tabId === 'blueprint' && leafletMap) {
+            setTimeout(() => {
+                leafletMap.invalidateSize();
+            }, 250);
         }
 
         window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -1248,16 +1432,584 @@
         }
     }
 
-    // Render Blueprint Markdown & Stats
+    // =========================================================================
+    // DAY SELECTOR & INTERACTIVE LEAFLET ROUTE MAP ENGINE
+    // =========================================================================
+    const CITY_COORDINATES = {
+        '도쿄': [35.6762, 139.6503], '일본 도쿄': [35.6762, 139.6503], 'tokyo': [35.6762, 139.6503],
+        '오사카': [34.6937, 135.5023], 'osaka': [34.6937, 135.5023],
+        '교토': [35.0116, 135.7681], '후쿠오카': [33.5902, 130.4017],
+        '삿포로': [43.0618, 141.3545], '오키나와': [26.2124, 127.6809], '나고야': [35.1815, 136.9066],
+        '서울': [37.5665, 126.9780], '제주': [33.4996, 126.5312], '제주도': [33.4996, 126.5312],
+        '부산': [35.1796, 129.0756], '경주': [35.8562, 129.2247], '강릉': [37.7519, 128.8761],
+        '속초': [38.2070, 128.5918], '여수': [34.7604, 127.6622], '전주': [35.8242, 127.1480],
+        '방콕': [13.7563, 100.5018], '치앙마이': [18.7883, 98.9853],
+        '다낭': [16.0544, 108.2022], '하노이': [21.0285, 105.8542], '호치민': [10.8231, 106.6297],
+        '싱가포르': [1.3521, 103.8198], '타이베이': [25.0330, 121.5654], '홍콩': [22.3193, 114.1694],
+        '발리': [-8.4095, 115.1889], '세부': [10.3157, 123.8854], '보라카이': [11.9674, 121.9248],
+        '파리': [48.8566, 2.3522], '런던': [51.5074, -0.1278], '로마': [41.9028, 12.4964],
+        '피렌체': [43.7696, 11.2558], '바르셀로나': [41.3879, 2.1699], '마드리드': [40.4168, -3.7038],
+        '프라하': [50.0755, 14.4378], '비엔나': [48.2082, 16.3738], '인터라켄': [46.6863, 7.8632],
+        '뉴욕': [40.7128, -74.0060], '로스앤젤레스': [34.0522, -118.2437], 'la': [34.0522, -118.2437],
+        '샌프란시스코': [37.7749, -122.4194], '하와이': [21.3069, -157.8583], '괌': [13.4443, 144.7937],
+        '시드니': [-33.8688, 151.2093]
+    };
+
+    function getCityCenter(dest) {
+        if (!dest) return [35.6762, 139.6503];
+        const lower = dest.toLowerCase();
+        for (const [key, coords] of Object.entries(CITY_COORDINATES)) {
+            if (lower.includes(key.toLowerCase()) || key.toLowerCase().includes(lower)) {
+                return coords;
+            }
+        }
+        return [35.6762, 139.6503];
+    }
+
+    // Parse Markdown & Geo Data
+    function parseItineraryMarkdown(markdown, destination) {
+        let geoData = null;
+        const geoMatch = markdown.match(/```json:itinerary-geo\s*([\s\S]*?)```/);
+        if (geoMatch) {
+            try {
+                geoData = JSON.parse(geoMatch[1].trim());
+            } catch (e) {
+                console.warn("JSON itinerary-geo parsing error:", e);
+            }
+        }
+
+        // Clean out raw geo json block so displayed markdown is neat
+        const cleanMarkdown = markdown.replace(/```json:itinerary-geo[\s\S]*?```/g, '').trim();
+        const baseCenter = getCityCenter(destination);
+
+        const lines = cleanMarkdown.split('\n');
+        let overviewLines = [];
+        let dayChunks = [];
+        let budgetLines = [];
+        let tipsLines = [];
+
+        let currentDayObj = null;
+        let inBudget = false;
+        let inTips = false;
+
+        for (let i = 0; i < lines.length; i++) {
+            const line = lines[i];
+            const trimmed = line.trim();
+
+            if (trimmed.startsWith('## 3.') || trimmed.includes('예산 시뮬레이션')) {
+                inBudget = true;
+                inTips = false;
+                if (currentDayObj) {
+                    dayChunks.push(currentDayObj);
+                    currentDayObj = null;
+                }
+                budgetLines.push(line);
+                continue;
+            } else if (trimmed.startsWith('## 4.') || trimmed.includes('맞춤 여행 꿀팁')) {
+                inTips = true;
+                inBudget = false;
+                tipsLines.push(line);
+                continue;
+            }
+
+            if (inBudget) {
+                budgetLines.push(line);
+                continue;
+            }
+            if (inTips) {
+                tipsLines.push(line);
+                continue;
+            }
+
+            // Check Day Heading (### Day 1, ### Day 2, ### 1일차 etc.)
+            const dayMatch = trimmed.match(/###?\s*(?:Day\s*(\d+)|\s*(\d+)일차)[:\s\-]+(.*)/i);
+            if (dayMatch) {
+                if (currentDayObj) {
+                    dayChunks.push(currentDayObj);
+                }
+                const dayNum = parseInt(dayMatch[1] || dayMatch[2], 10);
+                const dayTitle = (dayMatch[3] || '').replace(/[\[\]]/g, '').trim() || `${dayNum}일차 추천 일정`;
+                currentDayObj = {
+                    day: dayNum,
+                    title: dayTitle,
+                    rawLines: [line],
+                    places: []
+                };
+                continue;
+            }
+
+            if (currentDayObj) {
+                currentDayObj.rawLines.push(line);
+            } else {
+                overviewLines.push(line);
+            }
+        }
+
+        if (currentDayObj) {
+            dayChunks.push(currentDayObj);
+        }
+
+        // Process each day's places
+        const days = dayChunks.map((d, dIdx) => {
+            const dayNum = d.day || (dIdx + 1);
+            let places = [];
+
+            // 1) First preference: Use places from Gemini's geoData JSON block
+            if (geoData && geoData.days) {
+                const geoDay = geoData.days.find(gd => gd.day === dayNum);
+                if (geoDay && Array.isArray(geoDay.places) && geoDay.places.length > 0) {
+                    places = geoDay.places.map((p, pIdx) => {
+                        let lat = parseFloat(p.lat);
+                        let lng = parseFloat(p.lng);
+                        if (isNaN(lat) || isNaN(lng)) {
+                            lat = baseCenter[0] + (pIdx * 0.012 - 0.018) + (dayNum * 0.006);
+                            lng = baseCenter[1] + (pIdx * 0.015 - 0.015) + (dayNum * 0.004);
+                        }
+                        return {
+                            name: p.name || `방문지 ${pIdx + 1}`,
+                            lat: lat,
+                            lng: lng,
+                            time: p.time || '',
+                            desc: p.desc || '',
+                            mapsUrl: `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(p.name + ' ' + destination)}`
+                        };
+                    });
+                }
+            }
+
+            // 2) Fallback: Extract from Markdown table rows if geoData was absent or missing places
+            if (places.length === 0) {
+                let spotIdx = 0;
+                d.rawLines.forEach(l => {
+                    const row = l.trim();
+                    if (row.startsWith('|') && !row.includes('---') && !row.includes('일정 / 방문지') && !row.includes('시간')) {
+                        const cols = row.split('|').map(c => c.trim()).filter((_, idx, arr) => idx > 0 && idx < arr.length - 1);
+                        if (cols.length >= 2) {
+                            const timeStr = cols[0];
+                            const rawPlace = cols[1];
+                            const cleanPlace = rawPlace.replace(/\[(.*?)\]\(.*?\)/g, '$1').replace(/[\*\_]/g, '').trim();
+                            const actCol = cols.length > 2 ? cols[2] : '';
+
+                            let mapUrl = '';
+                            const mapUrlMatch = actCol.match(/\[.*?구글 지도.*?\]\((https:\/\/www\.google\.com\/maps\/search\/\?api=1&query=.*?)\)/i);
+                            if (mapUrlMatch) {
+                                mapUrl = mapUrlMatch[1];
+                            } else {
+                                mapUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(cleanPlace + ' ' + destination)}`;
+                            }
+
+                            if (cleanPlace && cleanPlace !== '장소명' && cleanPlace.length > 1) {
+                                const lat = baseCenter[0] + (spotIdx * 0.012 - 0.016) + (dayNum * 0.007);
+                                const lng = baseCenter[1] + (spotIdx * 0.015 - 0.014) + (dayNum * 0.005);
+                                places.push({
+                                    name: cleanPlace,
+                                    lat: lat,
+                                    lng: lng,
+                                    time: timeStr,
+                                    desc: actCol.replace(/\[.*?\]\(.*?\)/g, '').trim(),
+                                    mapsUrl: mapUrl
+                                });
+                                spotIdx++;
+                            }
+                        }
+                    }
+                });
+            }
+
+            return {
+                day: dayNum,
+                title: d.title,
+                markdown: d.rawLines.join('\n').trim(),
+                places: places
+            };
+        });
+
+        return {
+            destination: destination,
+            overviewMarkdown: overviewLines.join('\n').trim(),
+            budgetMarkdown: budgetLines.join('\n').trim(),
+            tipsMarkdown: tipsLines.join('\n').trim(),
+            fullMarkdown: cleanMarkdown,
+            days: days
+        };
+    }
+
+    // Render Blueprint: Main Coordinator
     function renderBlueprint(markdown, dest, duration, budget, model) {
+        currentBlueprintMarkdown = markdown;
+        currentDestination = dest;
+
         document.getElementById('blueprint-title').textContent = `🌿 ${dest} 맞춤 여행 일정표`;
         document.getElementById('badge-active-model').textContent = `${model} verified`;
         document.getElementById('blueprint-created-time').textContent = new Date().toLocaleTimeString() + ' 갱신됨';
         document.getElementById('metric-duration').textContent = duration;
         document.getElementById('metric-budget').textContent = budget;
 
+        // Parse markdown and coordinate data
+        currentParsedItinerary = parseItineraryMarkdown(markdown, dest);
+
+        // Render Day buttons at the top
+        renderDayTabs(currentParsedItinerary.days);
+
+        // Default to Day 1 so user immediately gets a concise, easy-to-read view
+        if (currentParsedItinerary.days && currentParsedItinerary.days.length > 0) {
+            switchDayView(1);
+        } else {
+            switchDayView('all');
+        }
+    }
+
+    // Render Day Selector Tabs
+    function renderDayTabs(days) {
+        const container = document.getElementById('day-tabs-container');
+        if (!container) return;
+
+        let html = `
+            <button type="button" onclick="switchDayView('all')" id="day-tab-btn-all" 
+                class="day-tab-btn px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap flex items-center gap-1.5 shadow-xs">
+                <span>🌐</span>
+                <span>전체 일정</span>
+            </button>
+        `;
+
+        if (Array.isArray(days)) {
+            days.forEach(d => {
+                html += `
+                    <button type="button" onclick="switchDayView(${d.day})" id="day-tab-btn-${d.day}" 
+                        class="day-tab-btn px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap flex items-center gap-1.5 shadow-xs">
+                        <span>✨</span>
+                        <span>${d.day}일차 (Day ${d.day})</span>
+                    </button>
+                `;
+            });
+        }
+
+        html += `
+            <button type="button" onclick="switchDayView('budget')" id="day-tab-btn-budget" 
+                class="day-tab-btn px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap flex items-center gap-1.5 shadow-xs">
+                <span>💰</span>
+                <span>예산 & 꿀팁</span>
+            </button>
+        `;
+
+        container.innerHTML = html;
+    }
+
+    // Switch between Day Views (all / 1 / 2 / 3 ... / budget)
+    function switchDayView(dayKey) {
+        currentActiveDay = dayKey;
+
+        // Update button states
+        document.querySelectorAll('.day-tab-btn').forEach(btn => btn.classList.remove('active'));
+        const activeBtn = document.getElementById(`day-tab-btn-${dayKey}`);
+        if (activeBtn) activeBtn.classList.add('active');
+
         const contentArea = document.getElementById('blueprint-content-area');
-        contentArea.innerHTML = marked.parse(markdown);
+        const badgeEl = document.getElementById('day-header-badge');
+        const titleEl = document.getElementById('day-header-title');
+        const countEl = document.getElementById('day-spot-count');
+        const activeLabel = document.getElementById('active-day-label');
+
+        if (!currentParsedItinerary) return;
+
+        if (dayKey === 'all') {
+            badgeEl.textContent = "OVERALL ITINERARY";
+            titleEl.textContent = `🌿 ${currentDestination} 맞춤 전체 일정표`;
+            const totalPlaces = currentParsedItinerary.days.reduce((acc, d) => acc + d.places.length, 0);
+            countEl.textContent = `총 ${totalPlaces}개 스팟 전 코스`;
+            activeLabel.textContent = "전체 일정 (종합 뷰)";
+            contentArea.innerHTML = marked.parse(currentParsedItinerary.fullMarkdown);
+        } else if (typeof dayKey === 'number') {
+            const dayObj = currentParsedItinerary.days.find(d => d.day === dayKey);
+            if (dayObj) {
+                badgeEl.textContent = `DAY ${dayKey} TIMELINE`;
+                titleEl.textContent = `Day ${dayKey}: ${dayObj.title}`;
+                countEl.textContent = `추천 방문지 ${dayObj.places.length}곳`;
+                activeLabel.textContent = `${dayKey}일차 (Day ${dayKey}) 일정`;
+                contentArea.innerHTML = marked.parse(dayObj.markdown);
+            }
+        } else if (dayKey === 'budget') {
+            badgeEl.textContent = "BUDGET & TIPS";
+            titleEl.textContent = "💰 예산 시뮬레이션 및 플래너 맞춤 꿀팁";
+            countEl.textContent = "현실적 물가 배분 & 플랜 B";
+            activeLabel.textContent = "예산 및 여행 팁";
+            const budgetMarkdown = (currentParsedItinerary.budgetMarkdown || "## 💰 예산 분석") + "\n\n" + (currentParsedItinerary.tipsMarkdown || "## 🔍 플래너 맞춤 꿀팁");
+            contentArea.innerHTML = marked.parse(budgetMarkdown);
+        }
+
+        // Update Route Map and sequence chips
+        updateMapRoute(dayKey);
+        updateRouteChips(dayKey);
+    }
+
+    // Initialize Leaflet Map
+    function initLeafletMap(center) {
+        if (leafletMap) return;
+        const mapContainer = document.getElementById('route-map');
+        if (!mapContainer) return;
+
+        leafletMap = L.map('route-map', {
+            zoomControl: true,
+            scrollWheelZoom: true
+        }).setView(center, 13);
+
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
+            subdomains: 'abcd',
+            maxZoom: 19
+        }).addTo(leafletMap);
+
+        mapLayerGroup = L.layerGroup().addTo(leafletMap);
+    }
+
+    // Update Interactive Route Map & Markers
+    function updateMapRoute(dayKey) {
+        const baseCenter = getCityCenter(currentDestination);
+        if (!leafletMap) {
+            initLeafletMap(baseCenter);
+        }
+        if (!mapLayerGroup) return;
+
+        mapLayerGroup.clearLayers();
+        currentMarkers = [];
+
+        const mapTitleEl = document.getElementById('map-card-title');
+        const mapSubtitleEl = document.getElementById('map-card-subtitle');
+        const mapSummaryBadge = document.getElementById('map-spots-summary');
+
+        const allLatLngs = [];
+
+        if (!currentParsedItinerary || !currentParsedItinerary.days || currentParsedItinerary.days.length === 0) {
+            leafletMap.setView(baseCenter, 13);
+            return;
+        }
+
+        if (dayKey === 'all') {
+            mapTitleEl.textContent = "전체 여행 추천 동선 지도";
+            mapSubtitleEl.textContent = "모든 일차의 이동 경로를 한눈에 볼 수 있습니다";
+
+            let totalSpotsCount = 0;
+            const dayPalette = ['#059669', '#0284C7', '#7C3AED', '#D97706', '#E11D48'];
+
+            currentParsedItinerary.days.forEach((dayObj, dIdx) => {
+                const dayLatLngs = [];
+                const dayColorClass = `day-color-${(dIdx % 5) + 1}`;
+                const lineColor = dayPalette[dIdx % dayPalette.length];
+
+                dayObj.places.forEach((place, pIdx) => {
+                    totalSpotsCount++;
+                    const latLng = [place.lat, place.lng];
+                    dayLatLngs.push(latLng);
+                    allLatLngs.push(latLng);
+
+                    const markerHtml = `<div class="route-marker-pin ${dayColorClass}">${pIdx + 1}</div>`;
+                    const customIcon = L.divIcon({
+                        className: 'custom-pin-container',
+                        html: markerHtml,
+                        iconSize: [32, 32],
+                        iconAnchor: [16, 16],
+                        popupAnchor: [0, -18]
+                    });
+
+                    const popupContent = `
+                        <div class="custom-map-popup text-xs space-y-1">
+                            <div class="flex items-center gap-1.5 font-extrabold text-slate-800 text-sm">
+                                <span class="w-5 h-5 rounded-full bg-emerald-600 text-white inline-flex items-center justify-center text-[10px]">${pIdx + 1}</span>
+                                <span>${place.name}</span>
+                            </div>
+                            <div class="text-[11px] text-emerald-700 font-bold">✨ Day ${dayObj.day} • ${place.time || '추천 스팟'}</div>
+                            ${place.desc ? `<p class="text-slate-600 text-[11px] leading-tight">${place.desc}</p>` : ''}
+                            <div class="pt-1">
+                                <a href="${place.mapsUrl}" target="_blank" class="inline-flex items-center gap-1 text-[11px] text-emerald-700 hover:text-emerald-900 font-bold underline">
+                                    📍 구글 지도 길찾기 ↗
+                                </a>
+                            </div>
+                        </div>
+                    `;
+
+                    const marker = L.marker(latLng, { icon: customIcon })
+                        .bindPopup(popupContent)
+                        .addTo(mapLayerGroup);
+
+                    currentMarkers.push({ marker, place, day: dayObj.day });
+                });
+
+                if (dayLatLngs.length > 1) {
+                    L.polyline(dayLatLngs, {
+                        color: lineColor,
+                        weight: 4,
+                        opacity: 0.85,
+                        dashArray: '6, 8',
+                        smoothFactor: 1.0
+                    }).addTo(mapLayerGroup);
+                }
+            });
+
+            mapSummaryBadge.textContent = `전체 ${totalSpotsCount}개 방문지 동선 표시 중`;
+
+        } else if (typeof dayKey === 'number') {
+            const dayObj = currentParsedItinerary.days.find(d => d.day === dayKey);
+            if (dayObj) {
+                mapTitleEl.textContent = `${dayKey}일차 추천 동선 지도`;
+                mapSubtitleEl.textContent = `Day ${dayKey} 방문 순서대로 최단 경로 연결`;
+                mapSummaryBadge.textContent = `${dayObj.places.length}개 방문지 동선 표시 중`;
+
+                dayObj.places.forEach((place, pIdx) => {
+                    const latLng = [place.lat, place.lng];
+                    allLatLngs.push(latLng);
+
+                    const markerHtml = `<div class="route-marker-pin">${pIdx + 1}</div>`;
+                    const customIcon = L.divIcon({
+                        className: 'custom-pin-container',
+                        html: markerHtml,
+                        iconSize: [32, 32],
+                        iconAnchor: [16, 16],
+                        popupAnchor: [0, -18]
+                    });
+
+                    const popupContent = `
+                        <div class="custom-map-popup text-xs space-y-1">
+                            <div class="flex items-center gap-1.5 font-extrabold text-slate-800 text-sm">
+                                <span class="w-5 h-5 rounded-full bg-emerald-600 text-white inline-flex items-center justify-center text-[10px]">${pIdx + 1}</span>
+                                <span>${place.name}</span>
+                            </div>
+                            <div class="text-[11px] text-emerald-700 font-bold">⏰ ${place.time || '추천 스팟'}</div>
+                            ${place.desc ? `<p class="text-slate-600 text-[11px] leading-tight">${place.desc}</p>` : ''}
+                            <div class="pt-1">
+                                <a href="${place.mapsUrl}" target="_blank" class="inline-flex items-center gap-1 text-[11px] text-emerald-700 hover:text-emerald-900 font-bold underline">
+                                    📍 구글 지도 길찾기 ↗
+                                </a>
+                            </div>
+                        </div>
+                    `;
+
+                    const marker = L.marker(latLng, { icon: customIcon })
+                        .bindPopup(popupContent)
+                        .addTo(mapLayerGroup);
+
+                    currentMarkers.push({ marker, place, day: dayKey });
+                });
+
+                if (allLatLngs.length > 1) {
+                    L.polyline(allLatLngs, {
+                        color: '#059669',
+                        weight: 4.5,
+                        opacity: 0.85,
+                        dashArray: '6, 8',
+                        smoothFactor: 1.0
+                    }).addTo(mapLayerGroup);
+                }
+            }
+        } else {
+            // budget or overview
+            mapTitleEl.textContent = "여행지 중심 뷰";
+            mapSubtitleEl.textContent = "예산 및 여행 꿀팁을 확인하세요";
+            mapSummaryBadge.textContent = `${currentDestination} 지역 뷰`;
+            allLatLngs.push(baseCenter);
+        }
+
+        // Fit bounds
+        if (allLatLngs.length > 0) {
+            const bounds = L.latLngBounds(allLatLngs);
+            leafletMap.fitBounds(bounds, { padding: [50, 50], maxZoom: 15 });
+        } else {
+            leafletMap.setView(baseCenter, 13);
+        }
+
+        setTimeout(() => {
+            if (leafletMap) leafletMap.invalidateSize();
+        }, 200);
+    }
+
+    // Update Route Chips Strip
+    function updateRouteChips(dayKey) {
+        const chipsContainer = document.getElementById('route-steps-chips');
+        if (!chipsContainer || !currentParsedItinerary) return;
+
+        let placesToShow = [];
+        if (dayKey === 'all') {
+            currentParsedItinerary.days.forEach(d => {
+                d.places.forEach((p, idx) => {
+                    placesToShow.push({ ...p, day: d.day, spotNum: idx + 1 });
+                });
+            });
+        } else if (typeof dayKey === 'number') {
+            const dayObj = currentParsedItinerary.days.find(d => d.day === dayKey);
+            if (dayObj) {
+                placesToShow = dayObj.places.map((p, idx) => ({ ...p, day: dayKey, spotNum: idx + 1 }));
+            }
+        }
+
+        if (placesToShow.length === 0) {
+            chipsContainer.innerHTML = `<span class="text-xs text-slate-400 py-1">스팟 정보가 없습니다.</span>`;
+            return;
+        }
+
+        let html = '';
+        placesToShow.forEach((p, idx) => {
+            html += `
+                <button type="button" onclick="focusPlaceOnMap(${p.lat}, ${p.lng}, ${idx})" 
+                    class="shrink-0 px-3 py-1.5 rounded-xl bg-white hover:bg-emerald-50 text-slate-700 hover:text-emerald-800 border border-emerald-200/90 font-bold text-xs flex items-center gap-1.5 transition shadow-xs">
+                    <span class="w-4 h-4 rounded-full bg-emerald-600 text-white inline-flex items-center justify-center text-[10px] font-extrabold">${p.spotNum}</span>
+                    <span>${p.name}</span>
+                    ${p.time ? `<span class="text-[10px] text-slate-400 font-normal">(${p.time.split('-')[0].trim()})</span>` : ''}
+                </button>
+            `;
+            if (idx < placesToShow.length - 1) {
+                html += `<span class="text-emerald-400 font-bold text-xs shrink-0">➔</span>`;
+            }
+        });
+
+        chipsContainer.innerHTML = html;
+    }
+
+    // Focus Place on Map (pan & open popup)
+    function focusPlaceOnMap(lat, lng, markerIdx) {
+        if (!leafletMap) return;
+        leafletMap.flyTo([lat, lng], 15, { duration: 1.2 });
+        if (currentMarkers && currentMarkers[markerIdx] && currentMarkers[markerIdx].marker) {
+            setTimeout(() => {
+                currentMarkers[markerIdx].marker.openPopup();
+            }, 600);
+        }
+    }
+
+    // Open Full Route in Google Maps
+    function openGoogleMapsRoute() {
+        if (!currentParsedItinerary) {
+            alert('먼저 일정을 생성해 주세요!');
+            return;
+        }
+
+        let places = [];
+        if (typeof currentActiveDay === 'number') {
+            const dayObj = currentParsedItinerary.days.find(d => d.day === currentActiveDay);
+            if (dayObj) places = dayObj.places;
+        } else {
+            currentParsedItinerary.days.forEach(d => {
+                places = places.concat(d.places);
+            });
+        }
+
+        if (places.length === 0) {
+            window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(currentDestination)}`, '_blank');
+            return;
+        }
+
+        if (places.length === 1) {
+            window.open(places[0].mapsUrl, '_blank');
+            return;
+        }
+
+        const origin = places[0].name + ' ' + currentDestination;
+        const destination = places[places.length - 1].name + ' ' + currentDestination;
+        const waypoints = places.slice(1, -1).slice(0, 8).map(p => p.name + ' ' + currentDestination).join('|');
+
+        let dirUrl = `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(origin)}&destination=${encodeURIComponent(destination)}`;
+        if (waypoints) {
+            dirUrl += `&waypoints=${encodeURIComponent(waypoints)}`;
+        }
+        window.open(dirUrl, '_blank');
     }
 
     // Toggle Thinking Box Collapse
