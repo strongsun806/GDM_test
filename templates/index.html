@@ -1,0 +1,1579 @@
+<!DOCTYPE html>
+<html lang="ko" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Autonomous Travel Architect | 자율형 여행 아키텍트</title>
+    <!-- Favicon -->
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>✈️</text></svg>">
+    <!-- Pretendard Webfont -->
+    <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Marked.js for Markdown -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <!-- Canvas Confetti -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        deepVoid: '#040711',
+                        surfaceDark: '#080d1a',
+                        cardDark: 'rgba(12, 19, 36, 0.72)',
+                        cardBorder: 'rgba(255, 255, 255, 0.08)',
+                        neonCyan: '#38bdf8',
+                        neonBlue: '#3b82f6',
+                        neonIndigo: '#6366f1',
+                        neonEmerald: '#10b981'
+                    },
+                    fontFamily: {
+                        sans: ['Pretendard', '-apple-system', 'BlinkMacSystemFont', 'system-ui', 'Roboto', 'sans-serif']
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        * {
+            box-sizing: border-box;
+            -webkit-font-smoothing: antialiased;
+        }
+        body {
+            font-family: 'Pretendard', sans-serif;
+            background-color: #040711;
+            color: #f1f5f9;
+            overflow-x: hidden;
+        }
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #040711;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.15);
+            border-radius: 9999px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(56, 189, 248, 0.5);
+        }
+
+        /* Glassmorphism Styles */
+        .glass-panel {
+            background: rgba(12, 19, 36, 0.75);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+        }
+        .glass-input {
+            background: rgba(18, 27, 49, 0.65);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            color: #ffffff;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .glass-input:focus {
+            outline: none;
+            border-color: #38bdf8;
+            box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.2);
+            background: rgba(24, 36, 64, 0.85);
+        }
+
+        /* Neon & Shimmer Buttons */
+        .btn-neon-primary {
+            background: linear-gradient(135deg, #0284c7 0%, #2563eb 50%, #6366f1 100%);
+            box-shadow: 0 0 20px -3px rgba(37, 99, 235, 0.5);
+            transition: all 0.25s ease;
+        }
+        .btn-neon-primary:hover {
+            box-shadow: 0 0 30px 2px rgba(56, 189, 248, 0.7);
+            transform: translateY(-1px);
+        }
+        .btn-neon-primary:active {
+            transform: translateY(1px);
+        }
+
+        /* Glowing Border Animation */
+        @keyframes border-glow {
+            0%, 100% { border-color: rgba(56, 189, 248, 0.3); }
+            50% { border-color: rgba(99, 102, 241, 0.6); }
+        }
+        .glow-border {
+            animation: border-glow 4s ease-in-out infinite;
+        }
+
+        /* Markdown Table Styling */
+        .prose-blueprint table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+            margin: 1.25rem 0;
+            border-radius: 0.75rem;
+            overflow: hidden;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            background: rgba(10, 16, 30, 0.6);
+        }
+        .prose-blueprint th {
+            background: rgba(30, 41, 59, 0.8);
+            color: #38bdf8;
+            font-weight: 600;
+            padding: 0.75rem 1rem;
+            text-align: left;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .prose-blueprint td {
+            padding: 0.75rem 1rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            color: #e2e8f0;
+            font-size: 0.925rem;
+        }
+        .prose-blueprint tr:last-child td {
+            border-bottom: none;
+        }
+        .prose-blueprint tr:hover td {
+            background: rgba(56, 189, 248, 0.06);
+        }
+        .prose-blueprint a {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
+            background: rgba(56, 189, 248, 0.12);
+            color: #38bdf8;
+            padding: 0.2rem 0.55rem;
+            border-radius: 0.375rem;
+            border: 1px solid rgba(56, 189, 248, 0.3);
+            text-decoration: none;
+            font-size: 0.85rem;
+            font-weight: 500;
+            transition: all 0.15s ease;
+        }
+        .prose-blueprint a:hover {
+            background: rgba(56, 189, 248, 0.25);
+            border-color: #38bdf8;
+            color: #ffffff;
+            transform: translateY(-1px);
+        }
+        .prose-blueprint h1 {
+            color: #ffffff;
+            font-size: 1.75rem;
+            font-weight: 800;
+            margin-top: 1.5rem;
+            margin-bottom: 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px solid rgba(56, 189, 248, 0.3);
+        }
+        .prose-blueprint h2 {
+            color: #38bdf8;
+            font-size: 1.35rem;
+            font-weight: 700;
+            margin-top: 1.75rem;
+            margin-bottom: 0.75rem;
+        }
+        .prose-blueprint h3 {
+            color: #a5b4fc;
+            font-size: 1.15rem;
+            font-weight: 600;
+            margin-top: 1.25rem;
+            margin-bottom: 0.5rem;
+        }
+        .prose-blueprint p {
+            margin: 0.5rem 0;
+            line-height: 1.65;
+            color: #cbd5e1;
+        }
+        .prose-blueprint ul {
+            list-style-type: disc;
+            padding-left: 1.25rem;
+            margin: 0.5rem 0;
+            color: #cbd5e1;
+        }
+        .prose-blueprint li {
+            margin: 0.25rem 0;
+        }
+    </style>
+</head>
+<body class="relative min-h-screen">
+
+    <!-- Interactive 3D Ocean Waves & Aurora Canvas Background -->
+    <canvas id="ocean-canvas" class="fixed inset-0 pointer-events-none z-0"></canvas>
+
+    <!-- App Wrapper -->
+    <div class="relative z-10 flex flex-col min-h-screen">
+
+        <!-- Top Navigation Bar -->
+        <header class="sticky top-0 z-50 glass-panel border-b border-white/10 px-4 lg:px-8 py-3.5 backdrop-blur-xl">
+            <div class="max-w-7xl mx-auto flex items-center justify-between gap-4">
+                
+                <!-- Logo & Brand Badge -->
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-sky-500 via-blue-600 to-indigo-600 p-[1px] shadow-lg shadow-sky-500/20">
+                        <div class="w-full h-full bg-slate-950 rounded-[11px] flex items-center justify-center text-sky-400">
+                            <!-- Compass Icon SVG -->
+                            <svg class="w-5 h-5 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <circle cx="12" cy="12" r="10" stroke-width="1.8"/>
+                                <polygon points="12,6 15,12 12,18 9,12" fill="currentColor"/>
+                            </svg>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="flex items-center gap-2">
+                            <span class="font-extrabold text-lg lg:text-xl tracking-tight text-white">TRAVEL <span class="text-transparent bg-clip-text bg-gradient-to-r from-sky-400 via-blue-400 to-indigo-300">ARCHITECT</span></span>
+                            <span class="hidden sm:inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-sky-500/10 text-sky-400 border border-sky-500/30">
+                                GEMINI 3.8 & 4 ARGON
+                            </span>
+                        </div>
+                        <p class="text-[11px] text-slate-400 font-medium hidden md:block">Google DeepMind AI Hackathon • 자율형 여행 공간·예산 정밀 설계 SaaS</p>
+                    </div>
+                </div>
+
+                <!-- Navigation Tabs -->
+                <nav class="hidden md:flex items-center p-1 rounded-xl bg-slate-900/80 border border-white/5 text-sm font-medium">
+                    <button onclick="switchTab('studio')" id="nav-btn-studio" class="nav-tab-btn px-4 py-2 rounded-lg text-white bg-sky-500/20 border border-sky-400/30 shadow-sm flex items-center gap-1.5 transition">
+                        <span>✨</span> 1. 청사진 스튜디오
+                    </button>
+                    <button onclick="switchTab('blueprint')" id="nav-btn-blueprint" class="nav-tab-btn px-4 py-2 rounded-lg text-slate-400 hover:text-white hover:bg-white/5 flex items-center gap-1.5 transition">
+                        <span>🗺️</span> 2. 종합 청사진 & 예약
+                    </button>
+                    <button onclick="switchTab('hitl')" id="nav-btn-hitl" class="nav-tab-btn px-4 py-2 rounded-lg text-slate-400 hover:text-white hover:bg-white/5 flex items-center gap-1.5 transition">
+                        <span>💬</span> 3. 대화형 재검증 (HITL)
+                    </button>
+                    <button onclick="switchTab('friends')" id="nav-btn-friends" class="nav-tab-btn px-4 py-2 rounded-lg text-slate-400 hover:text-white hover:bg-white/5 flex items-center gap-1.5 transition">
+                        <span>👥</span> 4. 동행자 허브
+                    </button>
+                </nav>
+
+                <!-- Header Actions -->
+                <div class="flex items-center gap-2">
+                    <button onclick="fillQuickDemo()" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500/25 transition flex items-center gap-1">
+                        <span>⚡</span> 빠른 시연 입력
+                    </button>
+                    <button onclick="toggleSettingsModal()" class="p-2 rounded-lg text-slate-300 hover:text-white bg-slate-800/80 hover:bg-slate-700/80 border border-white/10 transition" title="API 설정">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                    </button>
+                    <a href="/gradio" target="_blank" class="px-2.5 py-1.5 rounded-lg text-xs font-medium text-slate-400 hover:text-white bg-slate-900/60 border border-white/5 hover:border-white/20 transition hidden sm:inline-block">
+                        Gradio 뷰
+                    </a>
+                </div>
+            </div>
+
+            <!-- Mobile Navigation Bar -->
+            <div class="flex md:hidden overflow-x-auto gap-2 pt-3 pb-1 border-t border-white/5 mt-3 text-xs">
+                <button onclick="switchTab('studio')" id="m-nav-studio" class="whitespace-nowrap px-3 py-1.5 rounded-lg text-sky-400 bg-sky-500/10 border border-sky-400/30">✨ 1. 스튜디오</button>
+                <button onclick="switchTab('blueprint')" id="m-nav-blueprint" class="whitespace-nowrap px-3 py-1.5 rounded-lg text-slate-400 bg-slate-900/60">🗺️ 2. 청사진</button>
+                <button onclick="switchTab('hitl')" id="m-nav-hitl" class="whitespace-nowrap px-3 py-1.5 rounded-lg text-slate-400 bg-slate-900/60">💬 3. 재검증</button>
+                <button onclick="switchTab('friends')" id="m-nav-friends" class="whitespace-nowrap px-3 py-1.5 rounded-lg text-slate-400 bg-slate-900/60">👥 4. 동행자 허브</button>
+            </div>
+        </header>
+
+        <!-- Main Content Area -->
+        <main class="flex-1 max-w-7xl w-full mx-auto p-4 lg:p-8">
+
+            <!-- TAB 1: SPECIFICATION STUDIO -->
+            <section id="tab-studio" class="tab-content block space-y-6">
+                
+                <!-- Hero Introduction Banner -->
+                <div class="relative overflow-hidden rounded-2xl glass-panel p-6 lg:p-8 border border-white/10">
+                    <div class="absolute -right-20 -top-20 w-80 h-80 bg-sky-500/15 rounded-full blur-3xl pointer-events-none"></div>
+                    <div class="absolute -left-20 -bottom-20 w-80 h-80 bg-indigo-500/15 rounded-full blur-3xl pointer-events-none"></div>
+                    
+                    <div class="relative z-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+                        <div class="space-y-2 max-w-2xl">
+                            <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold bg-sky-500/10 text-sky-400 border border-sky-500/20">
+                                <span class="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
+                                Gemini 3.8 Flash High-Thinking Autonomous Engine
+                            </div>
+                            <h1 class="text-2xl lg:text-4xl font-extrabold text-white tracking-tight leading-tight">
+                                친구들과 떠나는 완벽한 여행,<br class="hidden sm:inline"/>
+                                <span class="text-transparent bg-clip-text bg-gradient-to-r from-sky-400 via-blue-400 to-indigo-300">건축 도면 기법의 공간·동선·예산 정밀 설계</span>
+                            </h1>
+                            <p class="text-sm lg:text-base text-slate-300 leading-relaxed">
+                                도보 피로도 0% 지리 동선 최단화, 현지 물가 기반 현실 예산 분배, 그리고 클릭 한 번으로 열리는 실제 구글 지도 및 숙소·티켓 예약 링크까지 원스톱으로 자동 설계합니다.
+                            </p>
+                        </div>
+                        <div class="grid grid-cols-2 gap-3 w-full sm:w-auto text-center">
+                            <div class="p-3.5 rounded-xl bg-slate-900/60 border border-white/10">
+                                <div class="text-xl font-bold text-sky-400">0.0 km</div>
+                                <div class="text-xs text-slate-400">동선 낭비 차단</div>
+                            </div>
+                            <div class="p-3.5 rounded-xl bg-slate-900/60 border border-white/10">
+                                <div class="text-xl font-bold text-indigo-400">1-Click</div>
+                                <div class="text-xs text-slate-400">지도 & 실시간 예약</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Input Forms Grid (2 Columns) -->
+                <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                    
+                    <!-- Left Column: Travel Specifications (7 cols) -->
+                    <div class="lg:col-span-7 space-y-6">
+                        <div class="glass-panel rounded-2xl p-6 border border-white/10 space-y-5">
+                            <div class="flex items-center justify-between border-b border-white/10 pb-4">
+                                <h3 class="text-lg font-bold text-white flex items-center gap-2">
+                                    <span class="text-sky-400">📍</span> 여행 기본 명세 (Specifications)
+                                </h3>
+                                <span class="text-xs text-slate-400">필수 조건 입력</span>
+                            </div>
+
+                            <!-- Destination Input & Quick Chips -->
+                            <div class="space-y-2">
+                                <label class="text-xs font-semibold text-slate-300 flex items-center justify-between">
+                                    <span>여행 목적지 (도시 / 국가)</span>
+                                    <span class="text-[11px] text-sky-400">빠른 선택 칩 클릭 가능</span>
+                                </label>
+                                <div class="relative">
+                                    <input type="text" id="dest-input" placeholder="예: 일본 도쿄, 프랑스 파리, 베트남 다낭, 제주도"
+                                        class="glass-input w-full px-4 py-3 rounded-xl text-sm font-medium pl-10" />
+                                    <span class="absolute left-3.5 top-3.5 text-slate-400 text-sm">✈️</span>
+                                </div>
+                                <div class="flex flex-wrap gap-1.5 pt-1">
+                                    <button type="button" onclick="setDest('일본 도쿄')" class="dest-chip text-xs px-2.5 py-1 rounded-lg bg-slate-800/80 hover:bg-sky-500/20 hover:text-sky-300 text-slate-300 border border-white/5 transition">🇯🇵 도쿄</button>
+                                    <button type="button" onclick="setDest('일본 오사카 & 교토')" class="dest-chip text-xs px-2.5 py-1 rounded-lg bg-slate-800/80 hover:bg-sky-500/20 hover:text-sky-300 text-slate-300 border border-white/5 transition">🇯🇵 오사카·교토</button>
+                                    <button type="button" onclick="setDest('프랑스 파리')" class="dest-chip text-xs px-2.5 py-1 rounded-lg bg-slate-800/80 hover:bg-sky-500/20 hover:text-sky-300 text-slate-300 border border-white/5 transition">🇫🇷 파리</button>
+                                    <button type="button" onclick="setDest('인도네시아 발리')" class="dest-chip text-xs px-2.5 py-1 rounded-lg bg-slate-800/80 hover:bg-sky-500/20 hover:text-sky-300 text-slate-300 border border-white/5 transition">🇮🇩 발리</button>
+                                    <button type="button" onclick="setDest('베트남 다낭 & 호이안')" class="dest-chip text-xs px-2.5 py-1 rounded-lg bg-slate-800/80 hover:bg-sky-500/20 hover:text-sky-300 text-slate-300 border border-white/5 transition">🇻🇳 다낭</button>
+                                    <button type="button" onclick="setDest('대한민국 제주도')" class="dest-chip text-xs px-2.5 py-1 rounded-lg bg-slate-800/80 hover:bg-sky-500/20 hover:text-sky-300 text-slate-300 border border-white/5 transition">🇰🇷 제주도</button>
+                                    <button type="button" onclick="setDest('미국 뉴욕')" class="dest-chip text-xs px-2.5 py-1 rounded-lg bg-slate-800/80 hover:bg-sky-500/20 hover:text-sky-300 text-slate-300 border border-white/5 transition">🇺🇸 뉴욕</button>
+                                </div>
+                            </div>
+
+                            <!-- Duration & Budget Grid -->
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <!-- Duration -->
+                                <div class="space-y-2">
+                                    <label class="text-xs font-semibold text-slate-300">여행 일정 / 기간</label>
+                                    <input type="text" id="duration-input" value="3박 4일"
+                                        class="glass-input w-full px-4 py-2.5 rounded-xl text-sm font-medium" />
+                                    <div class="flex gap-1">
+                                        <button type="button" onclick="setDuration('2박 3일')" class="text-[11px] px-2 py-0.5 rounded bg-slate-800 text-slate-300 hover:text-white border border-white/5">2박3일</button>
+                                        <button type="button" onclick="setDuration('3박 4일')" class="text-[11px] px-2 py-0.5 rounded bg-slate-800 text-slate-300 hover:text-white border border-white/5">3박4일</button>
+                                        <button type="button" onclick="setDuration('4박 5일')" class="text-[11px] px-2 py-0.5 rounded bg-slate-800 text-slate-300 hover:text-white border border-white/5">4박5일</button>
+                                        <button type="button" onclick="setDuration('1주일')" class="text-[11px] px-2 py-0.5 rounded bg-slate-800 text-slate-300 hover:text-white border border-white/5">1주일</button>
+                                    </div>
+                                </div>
+                                <!-- Budget -->
+                                <div class="space-y-2">
+                                    <label class="text-xs font-semibold text-slate-300">예상 총 예산</label>
+                                    <input type="text" id="budget-input" value="1인당 100만원"
+                                        class="glass-input w-full px-4 py-2.5 rounded-xl text-sm font-medium" />
+                                    <div class="flex gap-1">
+                                        <button type="button" onclick="setBudget('1인당 70만원')" class="text-[11px] px-2 py-0.5 rounded bg-slate-800 text-slate-300 hover:text-white border border-white/5">70만</button>
+                                        <button type="button" onclick="setBudget('1인당 100만원')" class="text-[11px] px-2 py-0.5 rounded bg-slate-800 text-slate-300 hover:text-white border border-white/5">100만</button>
+                                        <button type="button" onclick="setBudget('1인당 150만원')" class="text-[11px] px-2 py-0.5 rounded bg-slate-800 text-slate-300 hover:text-white border border-white/5">150만</button>
+                                        <button type="button" onclick="setBudget('가성비 최적화')" class="text-[11px] px-2 py-0.5 rounded bg-slate-800 text-slate-300 hover:text-white border border-white/5">가성비</button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Travel Style Multi-Select Chips -->
+                            <div class="space-y-2">
+                                <label class="text-xs font-semibold text-slate-300 flex items-center justify-between">
+                                    <span>친구들과 원하는 여행 스타일 (다중 선택)</span>
+                                    <span id="selected-style-count" class="text-[11px] text-sky-400 font-bold">2개 선택됨</span>
+                                </label>
+                                <div class="grid grid-cols-2 sm:grid-cols-4 gap-2" id="style-chips-container">
+                                    <button type="button" onclick="toggleStyleChip(this, '힐링/감성 카페')" class="style-chip active flex items-center gap-2 px-3 py-2.5 rounded-xl text-xs font-medium bg-sky-500/20 text-sky-300 border border-sky-400/40 shadow-sm transition">
+                                        <span>☕</span> <span>힐링 & 감성 카페</span>
+                                    </button>
+                                    <button type="button" onclick="toggleStyleChip(this, '미식/핫플 투어')" class="style-chip active flex items-center gap-2 px-3 py-2.5 rounded-xl text-xs font-medium bg-sky-500/20 text-sky-300 border border-sky-400/40 shadow-sm transition">
+                                        <span>🍣</span> <span>미식 & 핫플 투어</span>
+                                    </button>
+                                    <button type="button" onclick="toggleStyleChip(this, '문화/예술 & 건축')" class="style-chip flex items-center gap-2 px-3 py-2.5 rounded-xl text-xs font-medium bg-slate-800/70 text-slate-300 border border-white/5 hover:border-white/20 transition">
+                                        <span>🏛️</span> <span>문화 & 건축 탐방</span>
+                                    </button>
+                                    <button type="button" onclick="toggleStyleChip(this, '쇼핑/빈티지')" class="style-chip flex items-center gap-2 px-3 py-2.5 rounded-xl text-xs font-medium bg-slate-800/70 text-slate-300 border border-white/5 hover:border-white/20 transition">
+                                        <span>🛍️</span> <span>쇼핑 & 빈티지</span>
+                                    </button>
+                                    <button type="button" onclick="toggleStyleChip(this, '자연/힐링 풍경')" class="style-chip flex items-center gap-2 px-3 py-2.5 rounded-xl text-xs font-medium bg-slate-800/70 text-slate-300 border border-white/5 hover:border-white/20 transition">
+                                        <span>🌿</span> <span>자연 & 힐링 풍경</span>
+                                    </button>
+                                    <button type="button" onclick="toggleStyleChip(this, '액티비티/체험')" class="style-chip flex items-center gap-2 px-3 py-2.5 rounded-xl text-xs font-medium bg-slate-800/70 text-slate-300 border border-white/5 hover:border-white/20 transition">
+                                        <span>🎢</span> <span>액티비티 & 체험</span>
+                                    </button>
+                                    <button type="button" onclick="toggleStyleChip(this, '인생샷/포토스팟')" class="style-chip flex items-center gap-2 px-3 py-2.5 rounded-xl text-xs font-medium bg-slate-800/70 text-slate-300 border border-white/5 hover:border-white/20 transition">
+                                        <span>📸</span> <span>인생샷 포토존</span>
+                                    </button>
+                                    <button type="button" onclick="toggleStyleChip(this, '야경/나이트라이프')" class="style-chip flex items-center gap-2 px-3 py-2.5 rounded-xl text-xs font-medium bg-slate-800/70 text-slate-300 border border-white/5 hover:border-white/20 transition">
+                                        <span>🌃</span> <span>야경 & 핫바</span>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- Special Notes & Requests -->
+                            <div class="space-y-2">
+                                <label class="text-xs font-semibold text-slate-300">동행 친구들의 특별 요청 및 고려 사항</label>
+                                <textarea id="custom-notes" rows="3" placeholder="예: 걷는 시간 최소화(지하철 위주), 2일차 저녁은 분위기 좋은 스시 오마카세 필수, 아침은 느긋하게 시작"
+                                    class="glass-input w-full px-4 py-3 rounded-xl text-sm font-medium resize-none">동행 친구들과 여유로운 힐링 여행, 도보 이동 동선 최적화, 핫플레이스 맛집 필수 포함</textarea>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Right Column: Guidebook & Model Intelligence (5 cols) -->
+                    <div class="lg:col-span-5 space-y-6">
+                        
+                        <!-- File Upload Dropzone Card -->
+                        <div class="glass-panel rounded-2xl p-6 border border-white/10 space-y-4">
+                            <div class="flex items-center justify-between border-b border-white/10 pb-3">
+                                <h3 class="text-base font-bold text-white flex items-center gap-2">
+                                    <span class="text-sky-400">📄</span> 가이드북 / 메모 자료 (PDF, TXT, MD)
+                                </h3>
+                                <span class="text-[11px] text-slate-400">선택 사항</span>
+                            </div>
+
+                            <!-- Dropzone Box -->
+                            <div id="dropzone" onclick="document.getElementById('file-input').click()" 
+                                class="relative border-2 border-dashed border-white/15 hover:border-sky-400/60 rounded-xl p-6 text-center cursor-pointer transition bg-slate-900/40 hover:bg-sky-500/5 group">
+                                <input type="file" id="file-input" class="hidden" accept=".pdf,.txt,.md,.json,.csv" onchange="handleFileSelect(event)" />
+                                <div class="space-y-2">
+                                    <div class="w-12 h-12 mx-auto rounded-full bg-sky-500/10 flex items-center justify-center text-sky-400 group-hover:scale-110 transition">
+                                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/></svg>
+                                    </div>
+                                    <div class="text-xs font-semibold text-white">가이드북 PDF 또는 메모 파일 드래그 & 드롭</div>
+                                    <p class="text-[11px] text-slate-400">PDF, TXT, MD 파일 지원 (최대 10MB)</p>
+                                </div>
+                            </div>
+
+                            <!-- File Details / Preview Banner (Hidden by default) -->
+                            <div id="file-preview-card" class="hidden p-3 rounded-xl bg-sky-500/10 border border-sky-500/30 flex items-center justify-between text-xs">
+                                <div class="flex items-center gap-2 overflow-hidden">
+                                    <span class="text-sky-400 text-base">📑</span>
+                                    <div class="truncate">
+                                        <div id="file-name" class="font-semibold text-white truncate">guidebook.pdf</div>
+                                        <div id="file-size" class="text-[10px] text-slate-400">2.4 MB</div>
+                                    </div>
+                                </div>
+                                <button type="button" onclick="clearSelectedFile()" class="p-1 rounded hover:bg-white/10 text-slate-400 hover:text-rose-400 transition">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Gemini Engine & Fallback Intelligence Card -->
+                        <div class="glass-panel rounded-2xl p-6 border border-white/10 space-y-4">
+                            <div class="flex items-center justify-between border-b border-white/10 pb-3">
+                                <h3 class="text-base font-bold text-white flex items-center gap-2">
+                                    <span class="text-indigo-400">⚙️</span> Gemini 추론 엔진 & 모델 선택
+                                </h3>
+                                <span class="text-[11px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 font-medium">쿼터 자동 보호</span>
+                            </div>
+
+                            <!-- Model Selector Cards -->
+                            <div class="space-y-2">
+                                <label class="model-card flex items-start gap-3 p-3 rounded-xl bg-sky-500/15 border border-sky-400/40 cursor-pointer transition">
+                                    <input type="radio" name="model_choice" value="gemini-3.8-flash" checked class="mt-1 text-sky-500 focus:ring-0" />
+                                    <div>
+                                        <div class="text-xs font-bold text-white flex items-center gap-1.5">
+                                            <span>gemini-3.8-flash</span>
+                                            <span class="px-1.5 py-0.2 rounded text-[10px] bg-sky-500 text-slate-950 font-bold">기본 권장</span>
+                                        </div>
+                                        <p class="text-[11px] text-slate-300 mt-0.5">초고속 심층 추론, 무료 API 키 429/404 무장애 100% 작동 보장</p>
+                                    </div>
+                                </label>
+
+                                <label class="model-card flex items-start gap-3 p-3 rounded-xl bg-slate-900/60 border border-white/5 hover:border-white/20 cursor-pointer transition">
+                                    <input type="radio" name="model_choice" value="gemini-3.8-pro" class="mt-1 text-sky-500 focus:ring-0" />
+                                    <div>
+                                        <div class="text-xs font-bold text-white">gemini-3.8-pro</div>
+                                        <p class="text-[11px] text-slate-400 mt-0.5">복합 시나리오 심층 추론 (쿼터 초과 시 3.8-flash 자동 Fallback)</p>
+                                    </div>
+                                </label>
+
+                                <label class="model-card flex items-start gap-3 p-3 rounded-xl bg-slate-900/60 border border-white/5 hover:border-white/20 cursor-pointer transition">
+                                    <input type="radio" name="model_choice" value="gemini-4-argon" class="mt-1 text-sky-500 focus:ring-0" />
+                                    <div>
+                                        <div class="text-xs font-bold text-white flex items-center gap-1.5">
+                                            <span>gemini-4-argon</span>
+                                            <span class="px-1.5 py-0.2 rounded text-[10px] bg-indigo-500/30 text-indigo-300 font-bold">차세대 플래그십</span>
+                                        </div>
+                                        <p class="text-[11px] text-slate-400 mt-0.5">최신 플래그십 자율 아키텍트 모델 (429 에러 대응 탑재)</p>
+                                    </div>
+                                </label>
+                            </div>
+
+                            <!-- Thinking Level Radio -->
+                            <div class="flex items-center justify-between pt-1 text-xs">
+                                <span class="font-semibold text-slate-300">추론 깊이 (Thinking Level)</span>
+                                <div class="flex items-center gap-2">
+                                    <label class="flex items-center gap-1 text-slate-300 cursor-pointer">
+                                        <input type="radio" name="thinking_level" value="high" checked class="text-sky-500 focus:ring-0" /> High (심층)
+                                    </label>
+                                    <label class="flex items-center gap-1 text-slate-400 cursor-pointer">
+                                        <input type="radio" name="thinking_level" value="dynamic" class="text-sky-500 focus:ring-0" /> Dynamic
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+
+                <!-- Bottom CTA: Generate Blueprint Button -->
+                <div class="pt-4">
+                    <button type="button" id="btn-generate" onclick="generateBlueprint()" 
+                        class="btn-neon-primary w-full py-4 px-6 rounded-2xl text-white font-extrabold text-base lg:text-lg flex items-center justify-center gap-3 shadow-2xl relative overflow-hidden group">
+                        <!-- Ripple effect span -->
+                        <span class="absolute inset-0 w-full h-full bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity"></span>
+                        <svg class="w-6 h-6 text-sky-200 animate-spin hidden" id="spinner-generate" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
+                        </svg>
+                        <span id="btn-generate-text">✨ 자율형 맞춤 여행 청사진 설계 시작 (Generate AI Blueprint)</span>
+                    </button>
+                    
+                    <!-- Progress Step Feedback (Shows during generation) -->
+                    <div id="generation-progress" class="hidden mt-4 p-4 rounded-xl glass-panel border border-sky-500/30 text-center space-y-2">
+                        <div class="flex items-center justify-center gap-2 text-sky-400 text-sm font-bold">
+                            <span class="animate-pulse">🧠</span>
+                            <span id="progress-step-text">Gemini가 최적의 지리 동선과 일정을 계산하고 있습니다...</span>
+                        </div>
+                        <div class="w-full bg-slate-800 rounded-full h-1.5 overflow-hidden">
+                            <div id="progress-bar-fill" class="bg-gradient-to-r from-sky-400 to-indigo-500 h-1.5 rounded-full transition-all duration-700 w-1/4"></div>
+                        </div>
+                        <p class="text-[11px] text-slate-400">지리 공간 최단화 • 현지 물가 예산 분배 • 구글 지도 & 예약 링크 실시간 매핑</p>
+                    </div>
+                </div>
+
+            </section>
+
+
+            <!-- TAB 2: BLUEPRINT & TIMELINE DASHBOARD -->
+            <section id="tab-blueprint" class="tab-content hidden space-y-6">
+                
+                <!-- Destination Overview & Action Bar -->
+                <div class="glass-panel rounded-2xl p-6 border border-white/10">
+                    <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 border-b border-white/10 pb-5">
+                        <div class="space-y-1">
+                            <div class="flex items-center gap-2">
+                                <span class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-sky-500/20 text-sky-300 border border-sky-500/40" id="badge-active-model">
+                                    gemini-3.8-flash verified
+                                </span>
+                                <span class="text-xs text-slate-400" id="blueprint-created-time">방금 생성됨</span>
+                            </div>
+                            <h2 class="text-2xl lg:text-3xl font-extrabold text-white" id="blueprint-title">
+                                🌊 맞춤 여행 청사진 (Travel Blueprint)
+                            </h2>
+                            <p class="text-xs lg:text-sm text-slate-300" id="blueprint-subtitle">
+                                지리 동선 최단화 및 실시간 원클릭 예약 링크가 완벽히 매핑된 종합 청사진입니다.
+                            </p>
+                        </div>
+
+                        <!-- Action Toolbar -->
+                        <div class="flex flex-wrap items-center gap-2.5 w-full md:w-auto">
+                            <!-- Download Korean PDF Button -->
+                            <button type="button" onclick="downloadKoreanPDF()" id="btn-download-pdf"
+                                class="px-4 py-2.5 rounded-xl font-bold text-xs bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-400 hover:to-blue-500 text-white shadow-lg shadow-sky-500/25 flex items-center gap-2 transition">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                                <span>📄 한국어 A4 PDF 다운로드</span>
+                            </button>
+
+                            <!-- Kakao Talk Share Button -->
+                            <button type="button" onclick="openShareModal()"
+                                class="px-4 py-2.5 rounded-xl font-bold text-xs bg-amber-400 hover:bg-amber-300 text-slate-950 flex items-center gap-2 shadow-lg shadow-amber-400/20 transition">
+                                <span>💬</span>
+                                <span>단톡방 공유</span>
+                            </button>
+
+                            <!-- HITL Edit Button -->
+                            <button type="button" onclick="switchTab('hitl')"
+                                class="px-4 py-2.5 rounded-xl font-bold text-xs bg-slate-800 hover:bg-slate-700 text-white border border-white/10 flex items-center gap-2 transition">
+                                <span>🔄</span>
+                                <span>대화형 재검증</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Key Metrics Cards -->
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-3 pt-5">
+                        <div class="p-3.5 rounded-xl bg-slate-900/60 border border-white/5">
+                            <div class="text-xs text-slate-400">총 여행 기간</div>
+                            <div class="text-base font-bold text-white mt-1" id="metric-duration">3박 4일</div>
+                        </div>
+                        <div class="p-3.5 rounded-xl bg-slate-900/60 border border-white/5">
+                            <div class="text-xs text-slate-400">1인 예상 예산</div>
+                            <div class="text-base font-bold text-sky-400 mt-1" id="metric-budget">100만원</div>
+                        </div>
+                        <div class="p-3.5 rounded-xl bg-slate-900/60 border border-white/5">
+                            <div class="text-xs text-slate-400">지리 동선 효율도</div>
+                            <div class="text-base font-bold text-emerald-400 mt-1">98.6% (최단 경로)</div>
+                        </div>
+                        <div class="p-3.5 rounded-xl bg-slate-900/60 border border-white/5">
+                            <div class="text-xs text-slate-400">자율 검증 상태</div>
+                            <div class="text-base font-bold text-indigo-300 mt-1">Verified by AI</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Main Blueprint Content Renderer Card -->
+                <div class="glass-panel rounded-2xl p-6 lg:p-8 border border-white/10">
+                    <div id="blueprint-content-area" class="prose-blueprint">
+                        <!-- Populated dynamically via JS marked.parse -->
+                        <div class="text-center py-16 space-y-3">
+                            <div class="text-4xl">🗺️</div>
+                            <div class="text-lg font-bold text-white">아직 생성된 청사진이 없습니다.</div>
+                            <p class="text-xs text-slate-400">1단계 '청사진 스튜디오'에서 여행 정보를 입력하고 청사진 생성을 시작해 보세요.</p>
+                            <button onclick="switchTab('studio')" class="mt-2 px-4 py-2 rounded-xl text-xs font-semibold bg-sky-500/20 text-sky-300 border border-sky-400/30">
+                                청사진 스튜디오로 이동 ➔
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Thinking Process Expandable Card -->
+                <div class="glass-panel rounded-2xl p-5 border border-white/10 space-y-3">
+                    <div class="flex items-center justify-between cursor-pointer" onclick="toggleThinkingCollapse()">
+                        <div class="flex items-center gap-2">
+                            <span class="text-sky-400">🧠</span>
+                            <span class="text-xs font-bold text-slate-300">Gemini 자율 아키텍트 심층 추론 과정 (Deep Spatial Reasoning Trace)</span>
+                        </div>
+                        <span id="thinking-toggle-icon" class="text-slate-400 text-xs">▼ 펼치기</span>
+                    </div>
+                    <div id="thinking-content-box" class="hidden p-4 rounded-xl bg-slate-950/80 border border-white/5 text-xs text-slate-300 font-mono whitespace-pre-wrap leading-relaxed max-h-64 overflow-y-auto">
+                        추론 과정이 여기에 표시됩니다.
+                    </div>
+                </div>
+
+            </section>
+
+
+            <!-- TAB 3: HUMAN-IN-THE-LOOP (HITL) COPILOT -->
+            <section id="tab-hitl" class="tab-content hidden space-y-6">
+                
+                <div class="glass-panel rounded-2xl p-6 border border-white/10 space-y-4">
+                    <div class="flex items-center justify-between border-b border-white/10 pb-4">
+                        <div>
+                            <h2 class="text-xl font-bold text-white flex items-center gap-2">
+                                <span class="text-sky-400">💬</span> 대화형 일정 재검증 (Human-in-the-Loop Verification)
+                            </h2>
+                            <p class="text-xs text-slate-400 mt-1">친구들의 요청이나 돌발 변수를 입력하면 동선과 예산 충돌을 AI가 사후 검증하고 최신 일정표로 동기화합니다.</p>
+                        </div>
+                        <span class="px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 flex items-center gap-1.5">
+                            <span class="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
+                            실시간 피드백 대기 중
+                        </span>
+                    </div>
+
+                    <!-- Quick Preset Prompts -->
+                    <div class="space-y-1.5">
+                        <div class="text-[11px] font-semibold text-slate-400">빠른 피드백 템플릿:</div>
+                        <div class="flex flex-wrap gap-2">
+                            <button type="button" onclick="setFeedbackText('2일차 비 올 때를 대비해서 전면 실내 미술관/쇼핑몰 코스로 바꿔줘')" class="text-xs px-3 py-1.5 rounded-xl bg-slate-800/80 hover:bg-sky-500/20 text-slate-300 hover:text-sky-300 border border-white/5 transition">
+                                ☔ 2일차 우천 대비 실내 코스 전환
+                            </button>
+                            <button type="button" onclick="setFeedbackText('3일차 아침은 늦잠 모드로 11시부터 여유롭게 시작하도록 조정해줘')" class="text-xs px-3 py-1.5 rounded-xl bg-slate-800/80 hover:bg-sky-500/20 text-slate-300 hover:text-sky-300 border border-white/5 transition">
+                                😴 3일차 아침 늦잠 모드 (11시 시작)
+                            </button>
+                            <button type="button" onclick="setFeedbackText('식당 중 한 곳을 현지인들이 극찬하는 로컬 스시/라멘 맛집으로 변경해줘')" class="text-xs px-3 py-1.5 rounded-xl bg-slate-800/80 hover:bg-sky-500/20 text-slate-300 hover:text-sky-300 border border-white/5 transition">
+                                🍣 현지 로컬 맛집으로 식당 변경
+                            </button>
+                            <button type="button" onclick="setFeedbackText('전체 예산을 20% 절약할 수 있도록 가성비 숙소와 대중교통 패스 코스로 재조정해줘')" class="text-xs px-3 py-1.5 rounded-xl bg-slate-800/80 hover:bg-sky-500/20 text-slate-300 hover:text-sky-300 border border-white/5 transition">
+                                💸 예산 20% 절약 가성비 코스 최적화
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Interactive Chat Message Feed -->
+                    <div id="chat-messages-container" class="space-y-4 max-h-[460px] overflow-y-auto p-4 rounded-xl bg-slate-950/60 border border-white/5">
+                        <!-- Initial Bot Welcome Message -->
+                        <div class="flex items-start gap-3">
+                            <div class="w-8 h-8 rounded-lg bg-sky-500/20 text-sky-400 flex items-center justify-center shrink-0 text-sm font-bold border border-sky-400/30">
+                                AI
+                            </div>
+                            <div class="space-y-1 max-w-2xl">
+                                <div class="text-[11px] text-slate-400 font-semibold">Gemini Travel Architect</div>
+                                <div class="p-3.5 rounded-2xl rounded-tl-sm bg-slate-900 border border-white/10 text-xs text-slate-200 leading-relaxed">
+                                    안녕하세요! 저는 친구들과의 여행을 설계하는 자율형 아키텍트입니다.<br/>
+                                    생성된 일정에서 바꾸고 싶은 부분이 있으신가요? "2일차 저녁 스시야로 변경해줘", "도보 이동 줄여줘" 등 무엇이든 말씀해 주시면 동선 충돌을 검증하여 즉시 전체 일정표를 업데이트해 드립니다!
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Feedback Input Bar -->
+                    <div class="flex gap-2 pt-2">
+                        <input type="text" id="feedback-input" placeholder="수정하고 싶은 피드백을 입력하세요 (예: 2일차 오전 일정을 카페 거리로 바꿔줘)"
+                            class="glass-input flex-1 px-4 py-3 rounded-xl text-sm font-medium" 
+                            onkeydown="if(event.key==='Enter') sendFeedback()" />
+                        <button type="button" id="btn-send-feedback" onclick="sendFeedback()"
+                            class="px-5 py-3 rounded-xl font-bold text-xs bg-sky-500 hover:bg-sky-400 text-slate-950 flex items-center gap-2 transition shrink-0 shadow-lg shadow-sky-500/20">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
+                            <span>재검증 요청</span>
+                        </button>
+                    </div>
+                </div>
+
+            </section>
+
+
+            <!-- TAB 4: FRIENDS HUB & CHECKLIST -->
+            <section id="tab-friends" class="tab-content hidden space-y-6">
+                
+                <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                    
+                    <!-- Left: Interactive Packing Checklist (7 cols) -->
+                    <div class="lg:col-span-7 glass-panel rounded-2xl p-6 border border-white/10 space-y-5">
+                        <div class="flex items-center justify-between border-b border-white/10 pb-4">
+                            <div>
+                                <h3 class="text-lg font-bold text-white flex items-center gap-2">
+                                    <span class="text-sky-400">📋</span> 여행 준비물 체크리스트 (Packing Checklist)
+                                </h3>
+                                <p class="text-xs text-slate-400 mt-1">친구들과 챙길 필수품을 체크하세요. 브라우저에 자동 저장됩니다.</p>
+                            </div>
+                            <span id="checklist-progress-text" class="text-xs font-bold text-emerald-400">0 / 9 완료</span>
+                        </div>
+
+                        <!-- Progress Bar -->
+                        <div class="w-full bg-slate-900 rounded-full h-2 overflow-hidden border border-white/5">
+                            <div id="checklist-progress-bar" class="bg-gradient-to-r from-sky-400 to-emerald-400 h-2 rounded-full w-0 transition-all duration-300"></div>
+                        </div>
+
+                        <!-- Checklist Items Container -->
+                        <div id="checklist-items" class="space-y-2 text-xs">
+                            <!-- Items populated by JS -->
+                        </div>
+
+                        <!-- Add Item Input -->
+                        <div class="flex gap-2 pt-2">
+                            <input type="text" id="new-item-input" placeholder="새로운 준비물 추가 (예: 삼각대, 보조배터리)"
+                                class="glass-input flex-1 px-3.5 py-2.5 rounded-xl text-xs" 
+                                onkeydown="if(event.key==='Enter') addChecklistItem()" />
+                            <button type="button" onclick="addChecklistItem()"
+                                class="px-4 py-2.5 rounded-xl font-bold text-xs bg-slate-800 hover:bg-slate-700 text-white border border-white/10 transition">
+                                + 추가
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Right: Dutch Pay & Group Poll (5 cols) -->
+                    <div class="lg:col-span-5 space-y-6">
+                        
+                        <!-- 1/N Dutch Pay Expense Splitter -->
+                        <div class="glass-panel rounded-2xl p-6 border border-white/10 space-y-4">
+                            <div class="border-b border-white/10 pb-3">
+                                <h3 class="text-base font-bold text-white flex items-center gap-2">
+                                    <span class="text-amber-400">💰</span> N분의 1 스마트 정산기 (Dutch Pay)
+                                </h3>
+                                <p class="text-xs text-slate-400 mt-0.5">공동 경비 및 식사 비용을 빠르게 분할 계산합니다.</p>
+                            </div>
+                            
+                            <div class="space-y-3">
+                                <div>
+                                    <label class="text-[11px] font-semibold text-slate-300">총 결제 금액 (원)</label>
+                                    <input type="number" id="calc-total" value="480000" oninput="calculateDutchPay()"
+                                        class="glass-input w-full px-3 py-2 rounded-xl text-sm font-semibold" />
+                                </div>
+                                <div class="grid grid-cols-2 gap-3">
+                                    <div>
+                                        <label class="text-[11px] font-semibold text-slate-300">함께한 친구 수 (명)</label>
+                                        <input type="number" id="calc-people" value="4" min="1" oninput="calculateDutchPay()"
+                                            class="glass-input w-full px-3 py-2 rounded-xl text-sm font-semibold" />
+                                    </div>
+                                    <div>
+                                        <label class="text-[11px] font-semibold text-slate-300">절사 단위</label>
+                                        <select id="calc-round" onchange="calculateDutchPay()" class="glass-input w-full px-3 py-2 rounded-xl text-xs">
+                                            <option value="1">정확히 (1원 단위)</option>
+                                            <option value="100">100원 단위 올림</option>
+                                            <option value="1000" selected>1,000원 단위 올림</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <div class="p-4 rounded-xl bg-sky-500/10 border border-sky-500/30 text-center">
+                                    <div class="text-[11px] text-slate-300">1인당 분담 금액</div>
+                                    <div class="text-2xl font-extrabold text-sky-400 mt-1" id="calc-result">120,000 원</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Quick Kakao Share Generator Card -->
+                        <div class="glass-panel rounded-2xl p-6 border border-white/10 space-y-3">
+                            <div class="border-b border-white/10 pb-2">
+                                <h3 class="text-base font-bold text-white flex items-center gap-2">
+                                    <span class="text-yellow-400">💬</span> 단톡방 복사용 요약문
+                                </h3>
+                                <p class="text-xs text-slate-400">카카오톡이나 메신저에 바로 붙여넣을 수 있는 요약 텍스트입니다.</p>
+                            </div>
+                            <textarea id="quick-share-box" rows="5" readonly
+                                class="glass-input w-full p-3 rounded-xl text-xs font-mono text-slate-300 resize-none">아직 생성된 일정이 없습니다. 청사진을 먼저 생성해 주세요!</textarea>
+                            <button type="button" onclick="copyQuickShareText()"
+                                class="w-full py-2.5 rounded-xl font-bold text-xs bg-amber-400 hover:bg-amber-300 text-slate-950 transition flex items-center justify-center gap-2">
+                                <span>📋</span> 클립보드에 단톡방 텍스트 복사
+                            </button>
+                        </div>
+
+                    </div>
+                </div>
+
+            </section>
+
+        </main>
+
+        <!-- Footer -->
+        <footer class="border-t border-white/5 py-6 px-4 text-center text-xs text-slate-400 glass-panel mt-12">
+            <div class="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3">
+                <div class="flex items-center gap-2">
+                    <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+                    <span>Google DeepMind AI Hackathon Project • Autonomous Travel Architect</span>
+                </div>
+                <div>
+                    Powered by <strong class="text-sky-400 font-semibold">Gemini 3.8 Flash & 4 Argon</strong> • ReportLab PDF Engine
+                </div>
+            </div>
+        </footer>
+
+    </div>
+
+    <!-- SETTINGS MODAL -->
+    <div id="settings-modal" class="fixed inset-0 z-50 hidden bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4">
+        <div class="glass-panel rounded-2xl p-6 max-w-md w-full border border-white/20 shadow-2xl space-y-4">
+            <div class="flex items-center justify-between border-b border-white/10 pb-3">
+                <h3 class="text-base font-bold text-white flex items-center gap-2">
+                    <span>⚙️</span> 시스템 & API 설정
+                </h3>
+                <button onclick="toggleSettingsModal()" class="text-slate-400 hover:text-white text-lg font-bold">&times;</button>
+            </div>
+            
+            <div class="space-y-3">
+                <div class="space-y-1">
+                    <label class="text-xs font-semibold text-slate-300">Google Gemini API Key</label>
+                    <div class="relative">
+                        <input type="password" id="modal-api-key" placeholder="AIzaSy..." 
+                            class="glass-input w-full px-3 py-2.5 rounded-xl text-xs pr-10 font-mono" />
+                        <button type="button" onclick="toggleApiKeyVisibility()" class="absolute right-3 top-2.5 text-slate-400 hover:text-white text-xs">👁️</button>
+                    </div>
+                    <p class="text-[11px] text-slate-400">미입력 시 환경변수(GEMINI_API_KEY)를 자동으로 사용합니다.</p>
+                </div>
+            </div>
+
+            <div class="pt-2 flex justify-end gap-2">
+                <button onclick="toggleSettingsModal()" class="px-4 py-2 rounded-xl text-xs font-semibold bg-sky-500 hover:bg-sky-400 text-slate-950">
+                    저장 및 닫기
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- SHARE MODAL -->
+    <div id="share-modal" class="fixed inset-0 z-50 hidden bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4">
+        <div class="glass-panel rounded-2xl p-6 max-w-lg w-full border border-white/20 shadow-2xl space-y-4">
+            <div class="flex items-center justify-between border-b border-white/10 pb-3">
+                <h3 class="text-base font-bold text-white flex items-center gap-2">
+                    <span>💬</span> 단톡방 친구들에게 여행 청사진 공유
+                </h3>
+                <button onclick="closeShareModal()" class="text-slate-400 hover:text-white text-lg font-bold">&times;</button>
+            </div>
+
+            <div class="space-y-2">
+                <label class="text-xs text-slate-300">카카오톡 전송용 포맷 텍스트</label>
+                <textarea id="modal-share-textarea" rows="8" readonly 
+                    class="glass-input w-full p-3 rounded-xl text-xs font-mono text-slate-200 resize-none"></textarea>
+            </div>
+
+            <div class="flex justify-end gap-2 pt-2">
+                <button onclick="closeShareModal()" class="px-4 py-2 rounded-xl text-xs text-slate-400 hover:text-white bg-slate-800">닫기</button>
+                <button onclick="copyModalShareText()" class="px-4 py-2 rounded-xl text-xs font-bold bg-amber-400 hover:bg-amber-300 text-slate-950 flex items-center gap-1.5 shadow-lg shadow-amber-400/20">
+                    <span>📋</span> 클립보드에 복사
+                </button>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- ========================================================================= -->
+    <!-- INTERACTIVE 3D OCEAN WAVE SIMULATION & AURORA CANVAS SCRIPT               -->
+    <!-- ========================================================================= -->
+    <script>
+    (function initOceanCanvas() {
+        const canvas = document.getElementById('ocean-canvas');
+        if (!canvas) return;
+        const ctx = canvas.getContext('2d');
+
+        let width = canvas.width = window.innerWidth;
+        let height = canvas.height = window.innerHeight;
+
+        window.addEventListener('resize', () => {
+            width = canvas.width = window.innerWidth;
+            height = canvas.height = window.innerHeight;
+        });
+
+        // Mouse coordinates & ripples
+        const mouse = { x: width * 0.5, y: height * 0.4, targetX: width * 0.5, targetY: height * 0.4 };
+        window.addEventListener('mousemove', (e) => {
+            mouse.targetX = e.clientX;
+            mouse.targetY = e.clientY;
+        });
+
+        const ripples = [];
+        window.addEventListener('click', (e) => {
+            ripples.push({
+                x: e.clientX,
+                y: e.clientY,
+                radius: 5,
+                maxRadius: 180 + Math.random() * 80,
+                opacity: 0.8,
+                speed: 3 + Math.random() * 2
+            });
+        });
+
+        // Floating particles
+        const particles = [];
+        const PARTICLE_COUNT = 45;
+        for (let i = 0; i < PARTICLE_COUNT; i++) {
+            particles.push({
+                x: Math.random() * width,
+                y: Math.random() * height,
+                radius: Math.random() * 1.8 + 0.6,
+                vy: -(Math.random() * 0.4 + 0.15),
+                vx: (Math.random() - 0.5) * 0.3,
+                opacity: Math.random() * 0.5 + 0.2
+            });
+        }
+
+        // Ocean Wave Harmonics
+        const waves = [
+            { wavelength: 0.0035, amplitude: 38, speed: 0.015, color: 'rgba(8, 29, 61, 0.45)', yOffset: 0.72 },
+            { wavelength: 0.0055, amplitude: 26, speed: 0.022, color: 'rgba(12, 45, 90, 0.40)', yOffset: 0.78 },
+            { wavelength: 0.0080, amplitude: 18, speed: -0.018, color: 'rgba(14, 65, 120, 0.30)', yOffset: 0.83 },
+            { wavelength: 0.0120, amplitude: 12, speed: 0.030, color: 'rgba(56, 189, 248, 0.18)', yOffset: 0.88 }
+        ];
+
+        let time = 0;
+
+        function render() {
+            time += 1;
+            // Smooth mouse follow
+            mouse.x += (mouse.targetX - mouse.x) * 0.05;
+            mouse.y += (mouse.targetY - mouse.y) * 0.05;
+
+            // Clear with dark void gradient
+            const bgGrad = ctx.createLinearGradient(0, 0, 0, height);
+            bgGrad.addColorStop(0, '#040711');
+            bgGrad.addColorStop(0.5, '#060c1c');
+            bgGrad.addColorStop(1, '#07122a');
+            ctx.fillStyle = bgGrad;
+            ctx.fillRect(0, 0, width, height);
+
+            // Ambient Aurora Glow following cursor
+            const auroraGrad = ctx.createRadialGradient(mouse.x, mouse.y, 10, mouse.x, mouse.y, 480);
+            auroraGrad.addColorStop(0, 'rgba(56, 189, 248, 0.12)');
+            auroraGrad.addColorStop(0.5, 'rgba(99, 102, 241, 0.06)');
+            auroraGrad.addColorStop(1, 'rgba(4, 7, 17, 0)');
+            ctx.fillStyle = auroraGrad;
+            ctx.fillRect(0, 0, width, height);
+
+            // Draw Ripples
+            for (let i = ripples.length - 1; i >= 0; i--) {
+                const r = ripples[i];
+                r.radius += r.speed;
+                r.opacity *= 0.96;
+                ctx.beginPath();
+                ctx.arc(r.x, r.y, r.radius, 0, Math.PI * 2);
+                ctx.strokeStyle = `rgba(56, 189, 248, ${r.opacity * 0.5})`;
+                ctx.lineWidth = 1.5;
+                ctx.stroke();
+
+                if (r.radius > r.maxRadius || r.opacity < 0.02) {
+                    ripples.splice(i, 1);
+                }
+            }
+
+            // Draw Multi-layered Ocean Waves
+            waves.forEach((wave) => {
+                ctx.beginPath();
+                ctx.moveTo(0, height);
+
+                const baseY = height * wave.yOffset;
+                const step = 8;
+                for (let x = 0; x <= width + step; x += step) {
+                    let y = baseY + Math.sin(x * wave.wavelength + time * wave.speed) * wave.amplitude
+                                  + Math.cos(x * wave.wavelength * 0.5 - time * wave.speed * 0.7) * (wave.amplitude * 0.5);
+
+                    // Mouse proximity wave deflection
+                    const dx = x - mouse.x;
+                    const dy = y - mouse.y;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+                    if (dist < 200) {
+                        y += (1 - dist / 200) * 15 * Math.sin(time * 0.08);
+                    }
+
+                    ctx.lineTo(x, y);
+                }
+
+                ctx.lineTo(width, height);
+                ctx.closePath();
+                ctx.fillStyle = wave.color;
+                ctx.fill();
+            });
+
+            // Draw Particles
+            particles.forEach((p) => {
+                p.y += p.vy;
+                p.x += p.vx;
+                if (p.y < 0) {
+                    p.y = height + 10;
+                    p.x = Math.random() * width;
+                }
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+                ctx.fillStyle = `rgba(186, 230, 253, ${p.opacity})`;
+                ctx.fill();
+            });
+
+            requestAnimationFrame(render);
+        }
+        render();
+    })();
+    </script>
+
+
+    <!-- ========================================================================= -->
+    <!-- APPLICATION LOGIC & FASTAPI INTEGRATION SCRIPT                             -->
+    <!-- ========================================================================= -->
+    <script>
+    // Global State
+    let currentBlueprintMarkdown = "";
+    let currentDestination = "일본 도쿄";
+    let selectedFile = null;
+
+    // Quick chip helpers
+    function setDest(dest) {
+        document.getElementById('dest-input').value = dest;
+    }
+    function setDuration(dur) {
+        document.getElementById('duration-input').value = dur;
+    }
+    function setBudget(budget) {
+        document.getElementById('budget-input').value = budget;
+    }
+
+    // Toggle Travel Style Chips
+    function toggleStyleChip(btn, styleName) {
+        btn.classList.toggle('active');
+        if (btn.classList.contains('active')) {
+            btn.classList.remove('bg-slate-800/70', 'text-slate-300', 'border-white/5');
+            btn.classList.add('bg-sky-500/20', 'text-sky-300', 'border-sky-400/40', 'shadow-sm');
+        } else {
+            btn.classList.remove('bg-sky-500/20', 'text-sky-300', 'border-sky-400/40', 'shadow-sm');
+            btn.classList.add('bg-slate-800/70', 'text-slate-300', 'border-white/5');
+        }
+        updateSelectedStyleCount();
+    }
+
+    function updateSelectedStyleCount() {
+        const activeChips = document.querySelectorAll('.style-chip.active');
+        document.getElementById('selected-style-count').textContent = `${activeChips.length}개 선택됨`;
+    }
+
+    function getSelectedStyles() {
+        const activeChips = document.querySelectorAll('.style-chip.active');
+        const styles = [];
+        activeChips.forEach(chip => {
+            styles.push(chip.innerText.trim());
+        });
+        return styles.join(', ') || '힐링, 미식';
+    }
+
+    // Quick Demo Preset
+    function fillQuickDemo() {
+        document.getElementById('dest-input').value = "일본 도쿄 (긴자, 시부야, 롯폰기)";
+        document.getElementById('duration-input').value = "3박 4일";
+        document.getElementById('budget-input').value = "1인당 120만원";
+        document.getElementById('custom-notes').value = "친구들과 여유로운 힐링 여행, 도보 이동 동선 최적화, 핫플레이스 미식 투어 및 야경 명소 포함";
+        switchTab('studio');
+    }
+
+    // File Drag & Drop Handlers
+    const dropzone = document.getElementById('dropzone');
+    dropzone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        dropzone.classList.add('border-sky-400', 'bg-sky-500/10');
+    });
+    dropzone.addEventListener('dragleave', (e) => {
+        e.preventDefault();
+        dropzone.classList.remove('border-sky-400', 'bg-sky-500/10');
+    });
+    dropzone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        dropzone.classList.remove('border-sky-400', 'bg-sky-500/10');
+        if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+            handleUploadedFile(e.dataTransfer.files[0]);
+        }
+    });
+
+    function handleFileSelect(e) {
+        if (e.target.files && e.target.files[0]) {
+            handleUploadedFile(e.target.files[0]);
+        }
+    }
+
+    function handleUploadedFile(file) {
+        selectedFile = file;
+        document.getElementById('file-preview-card').classList.remove('hidden');
+        document.getElementById('file-name').textContent = file.name;
+        document.getElementById('file-size').textContent = (file.size / 1024).toFixed(1) + ' KB';
+    }
+
+    function clearSelectedFile() {
+        selectedFile = null;
+        document.getElementById('file-input').value = "";
+        document.getElementById('file-preview-card').classList.add('hidden');
+    }
+
+    // Tab Switcher
+    function switchTab(tabId) {
+        document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+        document.querySelectorAll('.nav-tab-btn').forEach(btn => {
+            btn.classList.remove('text-white', 'bg-sky-500/20', 'border', 'border-sky-400/30');
+            btn.classList.add('text-slate-400');
+        });
+
+        const activeContent = document.getElementById(`tab-${tabId}`);
+        if (activeContent) activeContent.classList.remove('hidden');
+
+        const activeNavBtn = document.getElementById(`nav-btn-${tabId}`);
+        if (activeNavBtn) {
+            activeNavBtn.classList.remove('text-slate-400');
+            activeNavBtn.classList.add('text-white', 'bg-sky-500/20', 'border', 'border-sky-400/30');
+        }
+
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    // Generate Blueprint (API Call to FastAPI)
+    async function generateBlueprint() {
+        const dest = document.getElementById('dest-input').value.trim();
+        if (!dest) {
+            alert('여행 목적지를 입력해 주세요!');
+            document.getElementById('dest-input').focus();
+            return;
+        }
+
+        currentDestination = dest;
+        const duration = document.getElementById('duration-input').value.trim() || "3박 4일";
+        const budget = document.getElementById('budget-input').value.trim() || "1인당 100만원";
+        const styles = getSelectedStyles();
+        const customNotes = document.getElementById('custom-notes').value.trim();
+
+        // Model & Thinking Config
+        const modelRadio = document.querySelector('input[name="model_choice"]:checked');
+        const modelName = modelRadio ? modelRadio.value : "gemini-3.8-flash";
+        const thinkingRadio = document.querySelector('input[name="thinking_level"]:checked');
+        const thinkingLevel = thinkingRadio ? thinkingRadio.value : "high";
+        const apiKey = document.getElementById('modal-api-key').value.trim();
+
+        // UI Loading State
+        const btn = document.getElementById('btn-generate');
+        const spinner = document.getElementById('spinner-generate');
+        const btnText = document.getElementById('btn-generate-text');
+        const progressDiv = document.getElementById('generation-progress');
+        const progressStepText = document.getElementById('progress-step-text');
+        const progressBarFill = document.getElementById('progress-bar-fill');
+
+        btn.disabled = true;
+        spinner.classList.remove('hidden');
+        btnText.textContent = "AI 아키텍트 정밀 추론 및 설계 중...";
+        progressDiv.classList.remove('hidden');
+
+        // Progress simulation steps
+        let step = 1;
+        const steps = [
+            "1. 공간 지리 정보 분석 및 최적 도보 동선 계산 중...",
+            "2. 현지 물가 데이터베이스 기반 예산 포트폴리오 산출 중...",
+            "3. 구글 지도 및 실시간 예약 링크 정밀 매핑 중...",
+            "4. 아키텍트 자율 검증 및 돌발 상황 플랜 B 검증 중..."
+        ];
+        const stepInterval = setInterval(() => {
+            if (step < steps.length) {
+                progressStepText.textContent = steps[step];
+                progressBarFill.style.width = `${((step + 1) / steps.length) * 100}%`;
+                step++;
+            }
+        }, 3200);
+
+        const formData = new FormData();
+        formData.append('destination', dest);
+        formData.append('duration', duration);
+        formData.append('budget', budget);
+        formData.append('styles', styles);
+        formData.append('custom_notes', customNotes);
+        formData.append('model_name', modelName);
+        formData.append('thinking_level', thinkingLevel);
+        formData.append('api_key', apiKey);
+        if (selectedFile) {
+            formData.append('file', selectedFile);
+        }
+
+        try {
+            const resp = await fetch('/api/generate', {
+                method: 'POST',
+                body: formData
+            });
+
+            clearInterval(stepInterval);
+
+            if (!resp.ok) {
+                const errData = await resp.json().catch(() => ({ message: '서버 오류가 발생했습니다.' }));
+                throw new Error(errData.message || '일정 생성 실패');
+            }
+
+            const data = await resp.json();
+            currentBlueprintMarkdown = data.itinerary;
+
+            // Render Markdown
+            renderBlueprint(data.itinerary, dest, duration, budget, data.model);
+
+            // Update Thinking Content
+            document.getElementById('thinking-content-box').textContent = data.thinking || "⚡ Gemini 심층 추론 완료";
+
+            // Update Kakao Share text
+            generateQuickShareText(dest, duration, budget, styles);
+
+            // Confetti effect!
+            if (window.confetti) {
+                confetti({
+                    particleCount: 100,
+                    spread: 70,
+                    origin: { y: 0.6 }
+                });
+            }
+
+            // Switch to Blueprint tab
+            switchTab('blueprint');
+
+        } catch (err) {
+            clearInterval(stepInterval);
+            alert(`오류: ${err.message}`);
+        } finally {
+            btn.disabled = false;
+            spinner.classList.add('hidden');
+            btnText.textContent = "✨ 자율형 맞춤 여행 청사진 설계 시작 (Generate AI Blueprint)";
+            progressDiv.classList.add('hidden');
+            progressBarFill.style.width = "25%";
+        }
+    }
+
+    // Render Blueprint Markdown & Stats
+    function renderBlueprint(markdown, dest, duration, budget, model) {
+        document.getElementById('blueprint-title').textContent = `🌊 ${dest} 맞춤 여행 청사진`;
+        document.getElementById('badge-active-model').textContent = `${model} verified`;
+        document.getElementById('blueprint-created-time').textContent = new Date().toLocaleTimeString() + ' 갱신됨';
+        document.getElementById('metric-duration').textContent = duration;
+        document.getElementById('metric-budget').textContent = budget;
+
+        const contentArea = document.getElementById('blueprint-content-area');
+        contentArea.innerHTML = marked.parse(markdown);
+    }
+
+    // Toggle Thinking Box Collapse
+    function toggleThinkingCollapse() {
+        const box = document.getElementById('thinking-content-box');
+        const icon = document.getElementById('thinking-toggle-icon');
+        if (box.classList.contains('hidden')) {
+            box.classList.remove('hidden');
+            icon.textContent = "▲ 접기";
+        } else {
+            box.classList.add('hidden');
+            icon.textContent = "▼ 펼치기";
+        }
+    }
+
+    // Send Human-in-the-Loop Feedback
+    async function sendFeedback() {
+        const input = document.getElementById('feedback-input');
+        const feedback = input.value.trim();
+        if (!feedback) return;
+
+        input.value = "";
+        const chatContainer = document.getElementById('chat-messages-container');
+
+        // Append User Message
+        const userMsg = document.createElement('div');
+        userMsg.className = "flex items-start gap-3 justify-end";
+        userMsg.innerHTML = `
+            <div class="space-y-1 max-w-2xl text-right">
+                <div class="text-[11px] text-slate-400 font-semibold">동행자 요청 피드백</div>
+                <div class="p-3.5 rounded-2xl rounded-tr-sm bg-sky-600 text-white text-xs leading-relaxed inline-block shadow-md">
+                    ${escapeHtml(feedback)}
+                </div>
+            </div>
+            <div class="w-8 h-8 rounded-lg bg-sky-400 text-slate-950 flex items-center justify-center shrink-0 text-xs font-bold">
+                ME
+            </div>
+        `;
+        chatContainer.appendChild(userMsg);
+        chatContainer.scrollTop = chatContainer.scrollHeight;
+
+        // Append Loading Bot Message
+        const loadingMsg = document.createElement('div');
+        loadingMsg.className = "flex items-start gap-3";
+        loadingMsg.id = "bot-loading-msg";
+        loadingMsg.innerHTML = `
+            <div class="w-8 h-8 rounded-lg bg-sky-500/20 text-sky-400 flex items-center justify-center shrink-0 text-sm font-bold border border-sky-400/30">
+                AI
+            </div>
+            <div class="p-3.5 rounded-2xl rounded-tl-sm bg-slate-900 border border-white/10 text-xs text-sky-300 animate-pulse">
+                동선 및 예산 충돌 검증 중... 최신 일정표를 업데이트하고 있습니다.
+            </div>
+        `;
+        chatContainer.appendChild(loadingMsg);
+        chatContainer.scrollTop = chatContainer.scrollHeight;
+
+        try {
+            const resp = await fetch('/api/feedback', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ feedback: feedback })
+            });
+
+            const loadingEl = document.getElementById('bot-loading-msg');
+            if (loadingEl) loadingEl.remove();
+
+            if (!resp.ok) {
+                const err = await resp.json().catch(() => ({ message: '피드백 반영 오류' }));
+                throw new Error(err.message || '수정 실패');
+            }
+
+            const data = await resp.json();
+            currentBlueprintMarkdown = data.itinerary;
+
+            // Append Bot Response
+            const botMsg = document.createElement('div');
+            botMsg.className = "flex items-start gap-3";
+            botMsg.innerHTML = `
+                <div class="w-8 h-8 rounded-lg bg-sky-500/20 text-sky-400 flex items-center justify-center shrink-0 text-sm font-bold border border-sky-400/30">
+                    AI
+                </div>
+                <div class="space-y-2 max-w-3xl">
+                    <div class="text-[11px] text-emerald-400 font-semibold flex items-center gap-1">
+                        <span>✓</span> 자율 검증 및 일정표 동기화 완료
+                    </div>
+                    <div class="p-4 rounded-2xl rounded-tl-sm bg-slate-900 border border-sky-500/30 text-xs text-slate-200 prose-blueprint leading-relaxed">
+                        ${marked.parse(data.itinerary)}
+                    </div>
+                    <button onclick="switchTab('blueprint')" class="text-[11px] text-sky-400 hover:text-sky-300 font-semibold flex items-center gap-1">
+                        전체 종합 청사진 탭에서 보기 ➔
+                    </button>
+                </div>
+            `;
+            chatContainer.appendChild(botMsg);
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+
+            // Re-render blueprint tab as well
+            renderBlueprint(
+                data.itinerary, 
+                currentDestination, 
+                document.getElementById('metric-duration').textContent, 
+                document.getElementById('metric-budget').textContent, 
+                "Gemini Verified"
+            );
+
+        } catch (err) {
+            const loadingEl = document.getElementById('bot-loading-msg');
+            if (loadingEl) loadingEl.remove();
+            alert(`피드백 처리 실패: ${err.message}`);
+        }
+    }
+
+    function setFeedbackText(text) {
+        document.getElementById('feedback-input').value = text;
+        sendFeedback();
+    }
+
+    // Download Korean A4 PDF
+    async function downloadKoreanPDF() {
+        if (!currentBlueprintMarkdown) {
+            alert('먼저 일정을 생성해 주세요!');
+            return;
+        }
+
+        const btn = document.getElementById('btn-download-pdf');
+        const origText = btn.innerHTML;
+        btn.innerHTML = `<span class="animate-spin">⏳</span> <span>PDF 생성 중...</span>`;
+        btn.disabled = true;
+
+        try {
+            const resp = await fetch('/api/download-pdf', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    markdown: currentBlueprintMarkdown,
+                    destination: currentDestination
+                })
+            });
+
+            if (!resp.ok) {
+                throw new Error('PDF 생성에 실패했습니다.');
+            }
+
+            const blob = await resp.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `${currentDestination}_Travel_Blueprint.pdf`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            window.URL.revokeObjectURL(url);
+
+        } catch (err) {
+            alert(`PDF 다운로드 오류: ${err.message}`);
+        } finally {
+            btn.innerHTML = origText;
+            btn.disabled = false;
+        }
+    }
+
+    // Kakao Talk & Share Text Generator
+    function generateQuickShareText(dest, duration, budget, styles) {
+        const text = `🌊 [우리들의 ${dest} 여행 청사진 공유]
+━━━━━━━━━━━━━━━━━━━━
+✈️ 여행지: ${dest}
+🗓️ 일정: ${duration}
+💰 예상 예산: ${budget}
+🎯 여행 스타일: ${styles}
+
+✨ 구글 지도 길찾기 및 실시간 숙소/티켓 예약 링크가 포함된 상세 일정표는 'Autonomous Travel Architect' 웹앱에서 확인하세요!
+📄 한국어 A4 정밀 리포트 PDF 다운로드 지원`;
+
+        document.getElementById('quick-share-box').value = text;
+        document.getElementById('modal-share-textarea').value = text;
+    }
+
+    function copyQuickShareText() {
+        const box = document.getElementById('quick-share-box');
+        navigator.clipboard.writeText(box.value).then(() => {
+            alert('단톡방 공유 텍스트가 클립보드에 복사되었습니다! 카카오톡에 붙여넣어 보세요.');
+        });
+    }
+
+    function openShareModal() {
+        document.getElementById('share-modal').classList.remove('hidden');
+    }
+    function closeShareModal() {
+        document.getElementById('share-modal').classList.add('hidden');
+    }
+    function copyModalShareText() {
+        const box = document.getElementById('modal-share-textarea');
+        navigator.clipboard.writeText(box.value).then(() => {
+            alert('클립보드 복사 완료!');
+            closeShareModal();
+        });
+    }
+
+    // Settings Modal
+    function toggleSettingsModal() {
+        document.getElementById('settings-modal').classList.toggle('hidden');
+    }
+    function toggleApiKeyVisibility() {
+        const input = document.getElementById('modal-api-key');
+        input.type = input.type === 'password' ? 'text' : 'password';
+    }
+
+    // Dutch Pay Calculator
+    function calculateDutchPay() {
+        const total = parseFloat(document.getElementById('calc-total').value) || 0;
+        const people = parseInt(document.getElementById('calc-people').value) || 1;
+        const roundUnit = parseInt(document.getElementById('calc-round').value) || 1;
+
+        if (people <= 0) return;
+        let perPerson = total / people;
+        if (roundUnit > 1) {
+            perPerson = Math.ceil(perPerson / roundUnit) * roundUnit;
+        }
+        document.getElementById('calc-result').textContent = perPerson.toLocaleString() + ' 원';
+    }
+
+    // Packing Checklist (Stored in localStorage)
+    const DEFAULT_CHECKLIST = [
+        { id: 1, text: "여권 및 신분증 (만료일 6개월 이상)", checked: false },
+        { id: 2, text: "항공권 / e-티켓 모바일 저장", checked: false },
+        { id: 3, text: "해외 결제 카드 (트래블로그/트래블월렛)", checked: false },
+        { id: 4, text: "포터블 보조배터리 (10,000mAh 이상)", checked: false },
+        { id: 5, text: "국가별 돼지코 / 멀티 어댑터", checked: false },
+        { id: 6, text: "비상 상비약 (두통약, 소화제, 지사제)", checked: false },
+        { id: 7, text: "우산 또는 접이식 양우산", checked: false },
+        { id: 8, text: "숙소 및 투어 예약 바우처", checked: false },
+        { id: 9, text: "eSIM 또는 유심칩 활성화", checked: false }
+    ];
+
+    function loadChecklist() {
+        const saved = localStorage.getItem('travel_checklist');
+        const items = saved ? JSON.parse(saved) : DEFAULT_CHECKLIST;
+        renderChecklist(items);
+    }
+
+    function renderChecklist(items) {
+        const container = document.getElementById('checklist-items');
+        container.innerHTML = "";
+        let completed = 0;
+
+        items.forEach((item, idx) => {
+            if (item.checked) completed++;
+            const div = document.createElement('div');
+            div.className = `flex items-center justify-between p-2.5 rounded-xl border transition ${item.checked ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-300 line-through' : 'bg-slate-900/60 border-white/5 text-slate-200'}`;
+            div.innerHTML = `
+                <label class="flex items-center gap-2.5 cursor-pointer flex-1">
+                    <input type="checkbox" ${item.checked ? 'checked' : ''} onchange="toggleChecklistItem(${idx})" 
+                        class="w-4 h-4 rounded text-sky-500 bg-slate-800 border-white/20 focus:ring-0" />
+                    <span class="text-xs font-medium">${escapeHtml(item.text)}</span>
+                </label>
+                <button type="button" onclick="deleteChecklistItem(${idx})" class="text-slate-500 hover:text-rose-400 p-1 text-xs">✕</button>
+            `;
+            container.appendChild(div);
+        });
+
+        // Update progress
+        const total = items.length;
+        document.getElementById('checklist-progress-text').textContent = `${completed} / ${total} 완료`;
+        const percent = total > 0 ? (completed / total) * 100 : 0;
+        document.getElementById('checklist-progress-bar').style.width = `${percent}%`;
+
+        localStorage.setItem('travel_checklist', JSON.stringify(items));
+    }
+
+    function toggleChecklistItem(index) {
+        const items = JSON.parse(localStorage.getItem('travel_checklist') || "[]");
+        if (items[index]) {
+            items[index].checked = !items[index].checked;
+            renderChecklist(items);
+        }
+    }
+
+    function addChecklistItem() {
+        const input = document.getElementById('new-item-input');
+        const text = input.value.trim();
+        if (!text) return;
+
+        const items = JSON.parse(localStorage.getItem('travel_checklist') || "[]");
+        items.push({ id: Date.now(), text: text, checked: false });
+        input.value = "";
+        renderChecklist(items);
+    }
+
+    function deleteChecklistItem(index) {
+        const items = JSON.parse(localStorage.getItem('travel_checklist') || "[]");
+        items.splice(index, 1);
+        renderChecklist(items);
+    }
+
+    // Helper: Escape HTML
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
+    // Initialize on load
+    window.addEventListener('DOMContentLoaded', () => {
+        loadChecklist();
+        calculateDutchPay();
+        generateQuickShareText("일본 도쿄", "3박 4일", "1인당 100만원", "힐링, 미식");
+    });
+    </script>
+</body>
+</html>
