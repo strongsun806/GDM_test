@@ -1,15 +1,18 @@
 """
-Gemini 4 Argon & 3.8 기반 자율형 여행 아키텍트 (Agentic Travel Architect)
+Gemini 3.8 & 4 Argon 기반 자율형 여행 아키텍트 (Agentic Travel Architect)
 Google DeepMind AI Hackathon Project
-- Geometric Neon & Architect Modern Glassmorphism UI/UX
-- Blueprint Grid & Aurora Glow Visual Architecture
+- Collaborative Interactive Travel Workspace for Friends
+- High-Contrast Clean & Modern Travel Tech Theme (Crystal-Clear Legibility)
+- One-Click Booking & Navigation Links (Google Maps, Agoda, Klook, Skyscanner)
+- High-Quality Korean PDF Report Export (ReportLab with Malgun Gothic)
 - Models: gemini-3.8-flash (Default), gemini-3.8-pro, gemini-4-argon
-- 100% Free Tier Resilient (Auto-Fallback Engine for 404/429 Quota)
-- Deep Spatial & Budget Reasoning with Human-in-the-Loop (HITL) Verification
+- Intelligent Free-Tier Auto-Fallback Engine for 404/429
 """
 
 import os
 import sys
+import re
+import urllib.parse
 import tempfile
 from pathlib import Path
 import gradio as gr
@@ -33,45 +36,73 @@ try:
 except ImportError:
     PYPDF_AVAILABLE = False
 
+# ReportLab for PDF generation
+try:
+    from reportlab.lib.pagesizes import A4
+    from reportlab.lib import colors
+    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+    from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, HRFlowable
+    from reportlab.pdfbase import pdfmetrics
+    from reportlab.pdfbase.ttfonts import TTFont
+    REPORTLAB_AVAILABLE = True
+    # Register Malgun font if available on Windows
+    font_path = "C:\\Windows\\Fonts\\malgun.ttf"
+    if os.path.exists(font_path):
+        try:
+            pdfmetrics.registerFont(TTFont("Malgun", font_path))
+            PDF_FONT = "Malgun"
+        except Exception:
+            PDF_FONT = "Helvetica"
+    else:
+        PDF_FONT = "Helvetica"
+except ImportError:
+    REPORTLAB_AVAILABLE = False
+    PDF_FONT = "Helvetica"
+
 
 # =====================================================================
-# System Instructions for Agentic Travel Architect
+# System Instructions for Agentic Travel Architect (with Booking Links)
 # =====================================================================
 SYSTEM_INSTRUCTION = """당신은 구글 딥마인드 Gemini 기반 차세대 '자율형 여행 아키텍트(Agentic Travel Architect)'입니다.
-건축 설계(Architectural Blueprint)와 같은 정밀한 심층 추론(Deep Reasoning)과 공간·동선 최적화 역량을 발휘하여, 여행자의 조건(목적지, 일정, 예산, 스타일)과 첨부된 가이드북/메모 자료를 분석하여 빈틈없는 맞춤형 여행 청사진을 설계하고 사후 검증(Verification)을 수행합니다.
+친구들과 함께 떠나는 여행을 위해 정밀한 지리 동선, 현실적인 예산 분배, 그리고 [실제 예약 및 길찾기 링크]가 완벽히 포함된 고품질 맞춤형 여행 청사진(Blueprint)을 설계하고 사후 검증(Verification)을 수행합니다.
 
-[핵심 설계 원칙: Architectural Blueprint Principles]
-1. 기하학적 지리 동선 최단화 (Spatial Geometric Optimization):
-   - 방문지 간의 실제 좌표, 대중교통 노선, 도보 체류 시간을 엄격히 계산하여 불필요한 동선 왕복(동서남북 낭비)을 제로화합니다.
-2. 예산 포트폴리오 현실성 검증 (Budget Feasibility):
-   - 숙박, 식비, 교통, 관광/체험, 비상금 카테고리별로 현지 실시간 물가를 반영하여 초과 없는 정밀한 예산 포트폴리오를 구성합니다.
-3. 가이드북/메모 핵심 앵커링 (Context Grounding):
-   - 사용자가 첨부한 메모나 가이드북 자료가 제공된 경우, 추천 스팟이나 필수 요구사항을 최우선 핵심 거점(Anchor Node)으로 일정에 배치합니다.
+[핵심 설계 및 행동 원칙]
+1. 모든 방문지/식당/숙소에 [원클릭 예약 & 길찾기 마크다운 링크] 필수 제공:
+   - 각 일정의 방문지, 식당, 카페, 숙소마다 사용자가 클릭 즉시 열어볼 수 있도록 구글 지도 및 예약 검색 URL을 마크다운 링크 형식으로 반드시 포함하세요.
+   - 링크 포맷 가이드:
+     * 구글 지도 길찾기: `[📍 구글 지도](https://www.google.com/maps/search/?api=1&query=인코딩된_장소명+목적지)`
+     * 맛집 예약/리뷰: `[🍽️ 맛집 정보](https://www.google.com/maps/search/?api=1&query=인코딩된_식당명+맛집)`
+     * 티켓/입장권/투어: `[🎟️ 클룩 티켓 검색](https://www.klook.com/ko/search/result/?query=인코딩된_명소)`
+     * 숙소 예약: `[🏨 아고다 숙소 검색](https://www.agoda.com/ko-kr/search?city=인코딩된_도시)`
+2. 지리적 동선 최단화 (Spatial Optimization):
+   - 실제 도보 이동성, 지하철/버스 환승, 스팟 간의 지리적 인접도를 엄밀히 계산하여 불필요한 이동 낭비를 완벽히 차단합니다.
+3. 예산 현실성 검증 (Budget Feasibility):
+   - 숙박, 식비, 교통, 관광/체험, 비상금 카테고리별로 현지 물가를 반영해 총 예산을 초과하지 않도록 검증합니다.
 4. Human-in-the-Loop 대화형 재검증 (Verification & Replanning):
-   - 사용자가 피드백(예: 우천 대비 실내 코스 변경, 특정 장소 추가/제외, 예산 조정)을 제공하면:
+   - 친구들의 피드백(예: 우천 대비 실내 코스 변경, 늦잠 모드, 특정 맛집 추가 등)을 받으면:
      [피드백 분석] ➔ [동선/시간/예산 충돌 검증] ➔ [최적 대체안 확정] ➔ [전체 일정 동기화]
-     과정을 거쳐 '아키텍트 검증 리포트'와 '최신 종합 일정표'를 완벽히 갱신합니다.
+     과정을 거쳐 검증 리포트와 함께 업데이트된 최신 종합 청사진을 출력합니다.
 
 [출력 양식: 1차 종합 일정표 생성 시]
-# 📐 [여행지] 자율형 맞춤 여행 설계 청사진 (Blueprint)
+# ✈️ [여행지] 맞춤 여행 청사진 (Travel Blueprint)
 
-## 📌 1. 아키텍트 전략 및 개요 (Architectural Overview)
+## 📌 1. 아키텍트 개요 및 여행 전략
 - **목적지**: [여행지]
 - **일정/기간**: [일정]
 - **여행 테마**: [선택 스타일 반영]
-- **총 예상 예산**: [예산 배분 요약]
+- **총 예상 예산**: [1인당/총액 배분 요약]
 - **가이드북 앵커 스팟**: [첨부자료 반영 내역]
 
-## 📅 2. 일자별 상세 타임라인 (Day-by-Day Timeline)
-(각 일자별로 동선 순서대로 표와 상세 해설을 제공하세요.)
+## 📅 2. 일자별 상세 일정표 (Day-by-Day Timeline)
+(각 일자별로 동선 순서대로 표를 작성하세요. 표 내부에 반드시 예약 및 지도 링크를 포함하세요.)
 ### Day 1: [핵심 테마 및 주요 방문 구역]
-| 시간 | 일정 / 방문지 | 세부 활동 및 현지 꿀팁 | 이동 수단 / 소요 시간 | 예상 비용 |
+| 시간 | 일정 / 방문지 | 세부 활동 & 원클릭 예약 링크 | 이동 수단 / 소요 시간 | 예상 비용 |
 | :--- | :--- | :--- | :--- | :--- |
-| 09:30 - 11:30 | 장소명 | 추천 메뉴 or 관람 포인트 | 지하철 15분 | 15,000원 |
+| 09:30 - 11:30 | 장소명 | 추천 활동 / [📍 구글 지도](https://www.google.com/maps/search/?api=1&query=...) | 지하철 15분 | 15,000원 |
 ...
 
 ## 💰 3. 예산 시뮬레이션 및 포트폴리오 (Budget Portfolio)
-- 🏨 숙박비: 약 OO원 (XX%)
+- 🏨 숙박비: 약 OO원 (XX%) - [🏨 숙소 최저가 검색](https://www.agoda.com/ko-kr/search?city=...)
 - 🍽️ 식비: 약 OO원 (XX%)
 - 🚇 교통비: 약 OO원 (XX%)
 - 🎟️ 입장/액티비티: 약 OO원 (XX%)
@@ -80,19 +111,19 @@ SYSTEM_INSTRUCTION = """당신은 구글 딥마인드 Gemini 기반 차세대 '�
 
 ## 🔍 4. 아키텍트 자율 검증 리포트 (Architect's Verification)
 - **동선 효율성 평가**: (지리적 인접도 및 피로도 관리 점검 결과)
-- **기상/돌발 대비 플랜 B**: (비가 오거나 휴관일 경우 대체 스팟)
-- **현지 예약 및 필수 팁**: (사전 예약 필요 스팟, 현지 교통패스 추천 등)
+- **돌발 상황 대비 플랜 B**: (비가 오거나 휴관일 경우 대체 스팟)
+- **친구들과 꿀팁**: (사전 예약 필수 스팟, 패스권 추천 등)
 
 [출력 양식: Human-in-the-Loop 피드백 수정 시]
 # 🔄 청사진 재검증 및 업데이트 리포트 (Blueprint Re-verified)
 
 ## 🛠️ [검증 보고서: Verification Report]
-- **반영된 유저 요청**: [요청 내용]
+- **반영된 유저/친구 요청**: [요청 내용]
 - **동선 및 시간 충돌 검증**: [기존 동선 대비 어떻게 충돌을 해결했는지 설명]
 - **예산 및 피로도 영향도**: [비용 변동 및 이동 피로도 분석]
 
 ## 🗺️ [업데이트된 최신 종합 일정표]
-(피드백이 반영되어 완벽하게 조정된 전체 일정표를 최신 상태로 재출력)
+(피드백이 반영되어 완벽하게 조정된 전체 일정표를 최신 상태로 재출력, 예약 링크 유지)
 """
 
 
@@ -152,14 +183,14 @@ def is_quota_or_notfound_error(e: Exception) -> bool:
 
 
 def render_fallback_notification(original_model: str, fallback_model: str = "gemini-3.8-flash") -> str:
-    """Semi-transparent modern Blueprint Toast for automatic fallback."""
+    """Clean modern Toast alert for automatic fallback."""
     return f"""
-<div class="architect-toast toast-fallback">
-    <div class="toast-indicator"></div>
-    <div class="toast-body">
-        <div class="toast-header-text">⚡ [자율 모델 Fallback 가동]</div>
-        <p class="toast-detail">
-            선택하신 <code>{original_model}</code> 모델의 쿼터(429) 또는 가용성(404) 제한이 감지되어, 안정적인 <strong>{fallback_model}</strong>(으)로 자동 전환하여 일정을 성공적으로 완성했습니다.
+<div class="travel-alert alert-fallback">
+    <div class="alert-icon-box">⚡</div>
+    <div class="alert-content">
+        <h4 class="alert-title">자율 모델 Fallback 작동 안내</h4>
+        <p class="alert-desc">
+            선택하신 <code>{original_model}</code> 모델의 쿼터(429) 또는 가용성(404) 제한이 감지되어, 가장 안정적인 <strong>{fallback_model}</strong>(으)로 자동 전환하여 일정을 끊김 없이 완성했습니다.
         </p>
     </div>
 </div>
@@ -167,21 +198,19 @@ def render_fallback_notification(original_model: str, fallback_model: str = "gem
 
 
 def render_quota_error_card(model_name: str) -> str:
-    """Sleek semi-transparent geometric toast for persistent 429 Quota errors."""
+    """High-contrast friendly card for persistent 429 Quota errors."""
     return f"""
-<div class="architect-toast toast-error">
-    <div class="toast-indicator error-indicator"></div>
-    <div class="toast-body">
-        <div class="toast-header-text">⚠️ API 쿼터 한도(429 Rate Limit) 초과 안내</div>
-        <p class="toast-detail">
-            현재 API 키의 호출 한도(RPM/TPM)가 일시적으로 소진되었습니다. (시도 모델: <code>{model_name}</code>)
-        </p>
-        <div class="toast-action-box">
-            <strong>💡 빠른 복구 조치:</strong>
-            <ul style="margin: 4px 0 0 16px; padding: 0;">
-                <li>모델을 <strong>[gemini-3.8-flash]</strong>로 선택하면 가장 높은 무료 쿼터가 보장됩니다.</li>
-                <li>약 30초~1분 후 다시 버튼을 누르면 할당량이 리셋됩니다.</li>
-                <li>새로운 Gemini API 키를 UI 상단에 입력하시면 즉시 재개할 수 있습니다.</li>
+<div class="travel-alert alert-error">
+    <div class="alert-icon-box error-icon">⚠️</div>
+    <div class="alert-content">
+        <h4 class="alert-title">API 쿼터 한도(429 Rate Limit) 초과</h4>
+        <p class="alert-desc">현재 API 키의 호출 한도(RPM/TPM)가 일시적으로 소진되었습니다. (시도 모델: <code>{model_name}</code>)</p>
+        <div class="alert-tips">
+            <strong>💡 해결 가이드:</strong>
+            <ul>
+                <li>모델을 <strong>[gemini-3.8-flash]</strong>로 선택하시면 가장 넉넉한 무료 쿼터가 적용됩니다.</li>
+                <li>약 30초~1분 후 다시 시도하시면 정상 작동합니다.</li>
+                <li>개인 Gemini API 키를 UI 상단에 입력하시면 즉시 재개됩니다.</li>
             </ul>
         </div>
     </div>
@@ -190,21 +219,170 @@ def render_quota_error_card(model_name: str) -> str:
 
 
 def render_generic_error_card(error_msg: str) -> str:
-    """Sleek semi-transparent error toast."""
+    """Clean error card for general exceptions."""
     return f"""
-<div class="architect-toast toast-error">
-    <div class="toast-indicator error-indicator"></div>
-    <div class="toast-body">
-        <div class="toast-header-text">⚠️ 시스템 처리 오류</div>
-        <p class="toast-detail">{error_msg}</p>
-        <p style="margin: 6px 0 0 0; color: #94A3B8; font-size: 0.85rem;">API 키 유효성 및 네트워크 상태를 확인 후 다시 시도해 주세요.</p>
+<div class="travel-alert alert-error">
+    <div class="alert-icon-box error-icon">⚠️</div>
+    <div class="alert-content">
+        <h4 class="alert-title">일정 생성 처리 중 오류가 발생했습니다</h4>
+        <p class="alert-desc">{error_msg}</p>
+        <p style="margin: 6px 0 0 0; color: #64748B; font-size: 0.88rem;">API 키 유효성 및 네트워크 연결 상태를 확인 후 다시 시도해 주세요.</p>
     </div>
 </div>
 """
 
 
 # =====================================================================
-# Core Logic: Generate Initial Itinerary & Re-plan (with Auto-Fallback)
+# PDF Generator: Convert Markdown Travel Itinerary into Styled PDF
+# =====================================================================
+def generate_pdf_from_markdown(markdown_text: str, destination: str) -> str:
+    """Generate a clean, high-contrast, multi-page Korean PDF travel blueprint."""
+    if not REPORTLAB_AVAILABLE:
+        raise RuntimeError("ReportLab이 설치되지 않았습니다. pip install reportlab")
+
+    temp_dir = tempfile.gettempdir()
+    clean_dest = re.sub(r'[^\w\s-]', '', destination).strip() or "Travel"
+    pdf_filename = f"{clean_dest}_Travel_Blueprint.pdf"
+    pdf_path = os.path.join(temp_dir, pdf_filename)
+
+    doc = SimpleDocTemplate(
+        pdf_path,
+        pagesize=A4,
+        leftMargin=36,
+        rightMargin=36,
+        topMargin=36,
+        bottomMargin=36
+    )
+
+    styles = getSampleStyleSheet()
+
+    h1_style = ParagraphStyle(
+        'PDF_H1',
+        fontName=PDF_FONT,
+        fontSize=18,
+        leading=24,
+        textColor=colors.HexColor('#0284C7'),
+        spaceAfter=8,
+        spaceBefore=12
+    )
+    h2_style = ParagraphStyle(
+        'PDF_H2',
+        fontName=PDF_FONT,
+        fontSize=13,
+        leading=18,
+        textColor=colors.HexColor('#0F172A'),
+        spaceAfter=6,
+        spaceBefore=10
+    )
+    h3_style = ParagraphStyle(
+        'PDF_H3',
+        fontName=PDF_FONT,
+        fontSize=11,
+        leading=15,
+        textColor=colors.HexColor('#2563EB'),
+        spaceAfter=4,
+        spaceBefore=6
+    )
+    body_style = ParagraphStyle(
+        'PDF_Body',
+        fontName=PDF_FONT,
+        fontSize=9,
+        leading=13,
+        textColor=colors.HexColor('#1E293B'),
+        spaceAfter=3
+    )
+    table_cell_style = ParagraphStyle(
+        'PDF_Cell',
+        fontName=PDF_FONT,
+        fontSize=8,
+        leading=11,
+        textColor=colors.HexColor('#1E293B')
+    )
+    table_hdr_style = ParagraphStyle(
+        'PDF_HeaderCell',
+        fontName=PDF_FONT,
+        fontSize=8,
+        leading=11,
+        textColor=colors.HexColor('#0F172A')
+    )
+
+    story = []
+
+    # Title header banner
+    story.append(Paragraph(f"✈️ {destination} 맞춤 여행 청사진 (Travel Blueprint)", h1_style))
+    story.append(Paragraph("Google DeepMind Gemini 기반 자율형 여행 아키텍트 생성 리포트", body_style))
+    story.append(HRFlowable(width="100%", thickness=1.5, color=colors.HexColor('#0284C7'), spaceBefore=4, spaceAfter=12))
+
+    lines = markdown_text.split('\n')
+    i = 0
+    while i < len(lines):
+        line = lines[i].strip()
+        if not line:
+            i += 1
+            continue
+
+        # Skip raw HTML / Toast markup from Markdown rendering
+        if line.startswith("<div") or line.startswith("</div>") or line.startswith("<span") or line.startswith("<p") or line.startswith("</p"):
+            i += 1
+            continue
+
+        if line.startswith("# "):
+            clean_text = line[2:].strip()
+            story.append(Paragraph(clean_text, h1_style))
+            story.append(HRFlowable(width="100%", thickness=1, color=colors.HexColor('#BAE6FD'), spaceBefore=2, spaceAfter=8))
+        elif line.startswith("## "):
+            clean_text = line[3:].strip()
+            story.append(Paragraph(clean_text, h2_style))
+        elif line.startswith("### "):
+            clean_text = line[4:].strip()
+            story.append(Paragraph(clean_text, h3_style))
+        elif line.startswith("|"):
+            # Table processing
+            table_rows = []
+            is_header = True
+            while i < len(lines) and lines[i].strip().startswith("|"):
+                row_line = lines[i].strip()
+                if not re.match(r'^\|[\s\-:|]+\|$', row_line):
+                    cells = [c.strip() for c in row_line.strip('|').split('|')]
+                    row_cells = []
+                    for c in cells:
+                        formatted_c = re.sub(r'\[(.*?)\]\((.*?)\)', r'<a href="\2" color="#0284C7"><u>\1</u></a>', c)
+                        formatted_c = re.sub(r'\*\*(.*?)\*\*', r'<b>\1</b>', formatted_c)
+                        c_style = table_hdr_style if is_header else table_cell_style
+                        row_cells.append(Paragraph(formatted_c, c_style))
+                    table_rows.append(row_cells)
+                    is_header = False
+                i += 1
+            if table_rows:
+                num_cols = max(len(r) for r in table_rows)
+                for r in table_rows:
+                    while len(r) < num_cols:
+                        r.append(Paragraph('', table_cell_style))
+                col_width = 520.0 / num_cols
+                t = Table(table_rows, colWidths=[col_width] * num_cols)
+                t.setStyle(TableStyle([
+                    ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#F1F5F9')),
+                    ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#CBD5E1')),
+                    ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+                    ('TOPPADDING', (0, 0), (-1, -1), 4),
+                    ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
+                ]))
+                story.append(t)
+                story.append(Spacer(1, 8))
+            continue
+        else:
+            formatted = re.sub(r'\[(.*?)\]\((.*?)\)', r'<a href="\2" color="#0284C7"><u>\1</u></a>', line)
+            formatted = re.sub(r'\*\*(.*?)\*\*', r'<b>\1</b>', formatted)
+            story.append(Paragraph(formatted, body_style))
+
+        i += 1
+
+    doc.build(story)
+    return pdf_path
+
+
+# =====================================================================
+# Core Logic: Generate Initial Itinerary & Re-plan (with Fallback)
 # =====================================================================
 def generate_initial_itinerary(
     destination: str,
@@ -231,7 +409,7 @@ def generate_initial_itinerary(
         file_summary = f"\n\n[사용자 첨부 가이드북/여행 메모 자료]:\n{file_text[:12000]}"
 
     styles_str = ", ".join(styles) if styles else "특별한 선호 없음 (종합 균형 코스)"
-    user_prompt = f"""[여행 설계 청사진 의뢰 정보]
+    user_prompt = f"""[여행 청사진 의뢰 정보]
 - 목적지: {destination}
 - 일정/기간: {duration}
 - 총 예산: {budget if budget.strip() else '가성비 기준 최적 배분'}
@@ -240,6 +418,7 @@ def generate_initial_itinerary(
 {file_summary}
 
 위 여행 청사진 의뢰 조건과 첨부된 자료를 심층 추론(Deep Spatial & Budget Reasoning)하여 동선 최적화, 현실적 예산 분배, 세부 타임라인이 포함된 종합 여행 설계 청사진과 아키텍트 자율 검증 리포트를 작성해 주세요.
+반드시 각 방문지, 식당, 카페, 숙소마다 클릭할 수 있는 [📍 구글 지도 길찾기](https://www.google.com/maps/search/?api=1&query=장소명) 및 예약 링크를 포함해 주세요!
 """
 
     fallback_occurred = False
@@ -249,7 +428,6 @@ def generate_initial_itinerary(
     try:
         client = get_gemini_client(api_key)
         
-        # Configure Generation with Thinking
         config = types.GenerateContentConfig(
             system_instruction=SYSTEM_INSTRUCTION,
             thinking_config=types.ThinkingConfig(thinking_level=thinking_level),
@@ -259,13 +437,11 @@ def generate_initial_itinerary(
         chat = None
         response = None
 
-        # First attempt: Selected model
         try:
             chat = client.chats.create(model=active_model, config=config)
             response = chat.send_message(user_prompt)
         except Exception as first_err:
             if is_quota_or_notfound_error(first_err) and active_model != "gemini-3.8-flash":
-                # AUTO-FALLBACK to gemini-3.8-flash
                 fallback_occurred = True
                 active_model = "gemini-3.8-flash"
                 chat = client.chats.create(model=active_model, config=config)
@@ -285,10 +461,9 @@ def generate_initial_itinerary(
         thinking_display = (
             "\n\n---\n\n".join(thought_process)
             if thought_process
-            else f"⚡ **{active_model}** 심층 추론(High Thinking) 완료\n- 기하학적 동선 최단화 알고리즘 검증\n- 현지 물가 기반 예산 포트폴리오 산출 완료\n- 가이드북 핵심 거점 앵커링 완료"
+            else f"⚡ **{active_model}** 심층 추론(High Thinking) 완료\n- 지리적 동선 최단화 알고리즘 검증 완료\n- 예약 링크(구글맵/호텔/투어) 연동 완료\n- 가이드북 핵심 거점 앵커링 완료"
         )
 
-        # Prepend fallback notice if applicable
         final_itinerary = initial_markdown
         if fallback_occurred:
             final_itinerary = render_fallback_notification(original_model, active_model) + "\n\n" + initial_markdown
@@ -299,11 +474,13 @@ def generate_initial_itinerary(
             "history": [],
             "destination": destination,
             "duration": duration,
+            "budget": budget,
+            "styles": styles_str,
             "model_name": active_model,
             "thinking_level": thinking_level,
         }
 
-        status_msg = f"✨ **{destination} ({duration})** 청사진 설계 완료! (모델: {active_model})"
+        status_msg = f"✨ **{destination} ({duration})** 청사진 설계 완료! [2. 종합 청사진 확인 & 실시간 예약] 탭으로 이동했습니다."
         
         return (
             gr.update(selected=1),
@@ -347,23 +524,22 @@ def update_itinerary_with_feedback(feedback_text: str, session_state: dict):
     history = session_state.get("history", [])
     model_name = session_state.get("model_name", "gemini-3.8-flash")
 
-    refine_prompt = f"""[사용자 피드백 (Human-in-the-Loop 재검증 요청)]:
+    refine_prompt = f"""[사용자 및 친구들의 피드백 (Human-in-the-Loop 재검증 요청)]:
 "{feedback_text.strip()}"
 
-위 사용자의 피드백을 반영하여 일정을 재검증(Verification)하고 업데이트해 주세요.
+위 피드백을 반영하여 일정을 재검증(Verification)하고 업데이트해 주세요.
 반드시 아래 두 부분으로 명확하게 구성해 주세요:
 1. ## 🛠️ [검증 보고서: Verification Report]:
    - 반영된 변경점
    - 동선 충돌 해결 및 시간/예산 영향도 분석
 2. ## 🗺️ [업데이트된 최신 종합 청사진]:
-   - 피드백이 완벽히 반영된 최신 전체 여행 일정표 (기존 마크다운 양식 유지)
+   - 피드백이 완벽히 반영된 최신 전체 여행 일정표 (기존 마크다운 및 [📍 구글 지도], [🍽️ 맛집/예약] 링크 유지)
 """
 
     try:
         response = chat.send_message(refine_prompt)
         response_text = response.text or "일정 업데이트에 실패했습니다."
 
-        # Extract internal thoughts
         thought_process = []
         if response.candidates and response.candidates[0].content and response.candidates[0].content.parts:
             for part in response.candidates[0].content.parts:
@@ -373,7 +549,7 @@ def update_itinerary_with_feedback(feedback_text: str, session_state: dict):
         thinking_display = (
             "\n\n---\n\n".join(thought_process)
             if thought_process
-            else f"⚡ **{model_name}** 피드백 재검증 완료\n- 반영 피드백: '{feedback_text[:30]}...'\n- 기하학적 동선 및 예산 충돌 해결 완료"
+            else f"⚡ **{model_name}** 피드백 재검증 완료\n- 반영 피드백: '{feedback_text[:30]}...'\n- 동선 및 예산 충돌 해결 완료 (예약 링크 갱신)"
         )
 
         session_state["current_itinerary"] = response_text
@@ -414,7 +590,27 @@ def update_itinerary_with_feedback(feedback_text: str, session_state: dict):
         )
 
 
-def export_itinerary_to_file(session_state: dict):
+def export_pdf_file(session_state: dict):
+    """Generate and export a styled Korean PDF file."""
+    if not session_state or not session_state.get("current_itinerary"):
+        return gr.update(visible=False)
+    
+    destination = session_state.get("destination", "여행")
+    content = session_state["current_itinerary"]
+    
+    try:
+        pdf_path = generate_pdf_from_markdown(content, destination)
+        return gr.update(value=pdf_path, visible=True)
+    except Exception as e:
+        # Fallback to markdown if PDF generation fails
+        temp_dir = tempfile.gettempdir()
+        file_path = os.path.join(temp_dir, f"{destination}_Travel_Blueprint.md")
+        with open(file_path, "w", encoding="utf-8") as f:
+            f.write(content)
+        return gr.update(value=file_path, visible=True)
+
+
+def export_markdown_file(session_state: dict):
     """Export current itinerary markdown to a downloadable file."""
     if not session_state or not session_state.get("current_itinerary"):
         return gr.update(visible=False)
@@ -423,337 +619,435 @@ def export_itinerary_to_file(session_state: dict):
     content = session_state["current_itinerary"]
     
     temp_dir = tempfile.gettempdir()
-    file_path = os.path.join(temp_dir, f"{destination}_Architectural_Blueprint.md")
+    file_path = os.path.join(temp_dir, f"{destination}_Travel_Blueprint.md")
     with open(file_path, "w", encoding="utf-8") as f:
         f.write(content)
         
     return gr.update(value=file_path, visible=True)
 
 
+def generate_shareable_summary(session_state: dict):
+    """Generate a clean text card suitable for KakaoTalk / messenger sharing with friends."""
+    if not session_state or not session_state.get("destination"):
+        return "⚠️ 먼저 1단계 탭에서 여행 일정을 생성해 주세요!"
+    
+    dest = session_state.get("destination", "여행지")
+    duration = session_state.get("duration", "일정")
+    budget = session_state.get("budget", "미정")
+    styles = session_state.get("styles", "자유 여행")
+    
+    summary = f"""📢 [우리들의 {dest} 여행 청사진 공유]
+━━━━━━━━━━━━━━━━━━━━
+✈️ 목적지: {dest}
+🗓️ 일정: {duration}
+💰 예상 예산: {budget}
+🎯 여행 스타일: {styles}
+
+✨ 세부 일정표 및 예약 링크는 '여행 아키텍트' 웹앱에서 확인하세요!
+📄 PDF 리포트 다운로드 및 실시간 수정도 가능합니다."""
+    return summary
+
+
 # =====================================================================
-# UI Styling: Geometric Neon & Architect Modern Glassmorphism CSS
+# UI Styling: High-Contrast Modern Travel Workspace (Clean & Collaborative)
 # =====================================================================
 custom_css = """
 /* =================================================================
-   Architect Blueprint & Geometric Neon Glassmorphism
+   Modern Collaborative Travel Workspace Theme (Clean & Crisp)
    ================================================================= */
 
 :root {
-    --bg-space: #0B0F19;
-    --card-glass: rgba(18, 24, 38, 0.78);
-    --card-border: rgba(59, 130, 246, 0.18);
-    --border-accent: rgba(6, 182, 212, 0.4);
-    --neon-cyan: #06B6D4;
-    --neon-blue: #3B82F6;
-    --neon-indigo: #8B5CF6;
-    --text-primary: #F8FAFC;
-    --text-secondary: #94A3B8;
+    --bg-page: #F8FAFC;
+    --card-surface: #FFFFFF;
+    --card-border: #E2E8F0;
+    --primary-blue: #0284C7;
+    --primary-hover: #0369A1;
+    --indigo-accent: #4F46E5;
+    --text-heading: #0F172A; /* Crisp deep slate */
+    --text-body: #1E293B;    /* High contrast dark text */
+    --text-muted: #64748B;
+    --success-green: #10B981;
 }
 
 body, .gradio-container {
-    background-color: var(--bg-space) !important;
+    background-color: var(--bg-page) !important;
     background-image: 
-        radial-gradient(ellipse at 50% 0%, rgba(59, 130, 246, 0.16) 0%, transparent 65%),
-        radial-gradient(ellipse at 85% 85%, rgba(139, 92, 246, 0.12) 0%, transparent 55%),
-        linear-gradient(rgba(255, 255, 255, 0.025) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(255, 255, 255, 0.025) 1px, transparent 1px) !important;
-    background-size: 100% 100%, 100% 100%, 36px 36px, 36px 36px !important;
-    color: var(--text-primary) !important;
-    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Pretendard", "Segoe UI", Roboto, sans-serif !important;
+        radial-gradient(at 10% 10%, rgba(2, 132, 199, 0.05) 0px, transparent 50%),
+        radial-gradient(at 90% 90%, rgba(79, 70, 229, 0.05) 0px, transparent 50%) !important;
+    color: var(--text-body) !important;
+    font-family: -apple-system, BlinkMacSystemFont, "Pretendard", "SF Pro Text", "Segoe UI", Roboto, "Noto Sans KR", sans-serif !important;
     max-width: 1400px !important;
     margin: 0 auto !important;
     padding: 0 16px !important;
 }
 
-/* Header Area - Blueprint Compass & Clean Typography */
-.blueprint-header {
-    padding: 32px 20px 20px 20px;
+/* Header Area - Clean & Inspiring Travel Magazine Style */
+.travel-header {
+    padding: 32px 20px 24px 20px;
     text-align: center;
-    position: relative;
+    border-bottom: 1px solid #E2E8F0;
+    margin-bottom: 24px;
+    background: #FFFFFF;
+    border-radius: 20px;
+    box-shadow: 0 2px 10px rgba(15, 23, 42, 0.04);
 }
 
-.blueprint-badge-row {
+.travel-badge-row {
     display: flex;
     justify-content: center;
     align-items: center;
-    gap: 10px;
-    margin-bottom: 14px;
+    gap: 8px;
+    margin-bottom: 12px;
     flex-wrap: wrap;
 }
 
-.blueprint-pill {
+.travel-pill {
     display: inline-flex;
     align-items: center;
     gap: 6px;
-    padding: 5px 14px;
-    border-radius: 8px;
+    padding: 5px 12px;
+    border-radius: 9999px;
     font-size: 0.8rem;
     font-weight: 600;
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
-    background: rgba(18, 24, 38, 0.85);
-    border: 1px solid rgba(59, 130, 246, 0.28);
-    color: #93C5FD;
-    box-shadow: 0 0 12px rgba(59, 130, 246, 0.12);
+    background: #EFF6FF;
+    border: 1px solid #BFDBFE;
+    color: #1D4ED8;
 }
 
-.pill-active-dot {
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-    background: #06B6D4;
-    box-shadow: 0 0 8px #06B6D4;
+.travel-pill.green {
+    background: #ECFDF5;
+    border-color: #A7F3D0;
+    color: #047857;
 }
 
-.blueprint-title {
-    font-size: 2.6rem;
+.travel-title {
+    font-size: 2.4rem;
     font-weight: 850;
+    color: var(--text-heading);
     letter-spacing: -0.03em;
-    background: linear-gradient(135deg, #FFFFFF 20%, #E2E8F0 50%, #60A5FA 80%, #A78BFA 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
     margin: 0 0 8px 0;
-    line-height: 1.15;
 }
 
-.blueprint-subtitle {
+.travel-subtitle {
     font-size: 1.05rem;
-    color: var(--text-secondary);
-    font-weight: 400;
+    color: var(--text-muted);
     margin: 0 auto;
-    max-width: 720px;
+    max-width: 760px;
+    line-height: 1.5;
 }
 
-/* Glassmorphic Blueprint Cards */
-.blueprint-panel, .card-panel {
-    background: var(--card-glass) !important;
-    backdrop-filter: blur(20px) !important;
-    -webkit-backdrop-filter: blur(20px) !important;
+/* Cards & Layout Panels */
+.travel-card {
+    background: var(--card-surface) !important;
     border: 1px solid var(--card-border) !important;
     border-radius: 16px !important;
     padding: 22px !important;
-    box-shadow: 0 16px 40px -12px rgba(0, 0, 0, 0.6) !important;
-    transition: all 0.25s ease;
+    box-shadow: 0 4px 16px -2px rgba(15, 23, 42, 0.05), 0 2px 6px -1px rgba(15, 23, 42, 0.02) !important;
+    transition: all 0.2s ease;
 }
 
-.blueprint-panel:hover {
-    border-color: rgba(6, 182, 212, 0.35) !important;
+.travel-card:hover {
+    border-color: #CBD5E1 !important;
 }
 
-/* Geometric Section Header with node indicator */
-.geo-header {
+/* Section Header */
+.section-title {
     display: flex;
     align-items: center;
     gap: 8px;
-    font-size: 1.1rem;
+    font-size: 1.15rem;
     font-weight: 700;
-    color: #F1F5F9;
+    color: var(--text-heading);
     margin-bottom: 14px;
-    letter-spacing: -0.01em;
 }
 
-.geo-node {
-    width: 8px;
-    height: 8px;
-    background: #3B82F6;
-    transform: rotate(45deg);
-    box-shadow: 0 0 8px #3B82F6;
-}
-
-/* Input Fields & Textboxes */
+/* Input Fields - Clean High Contrast White & Crisp Borders */
 input, textarea, select {
-    background: rgba(11, 15, 25, 0.8) !important;
-    border: 1px solid rgba(255, 255, 255, 0.09) !important;
-    color: #F8FAFC !important;
+    background: #FFFFFF !important;
+    border: 1.5px solid #CBD5E1 !important;
+    color: var(--text-body) !important;
     border-radius: 10px !important;
-    font-size: 0.94rem !important;
+    font-size: 0.95rem !important;
     padding: 10px 14px !important;
-    transition: all 0.2s ease !important;
 }
 
 input:focus, textarea:focus {
-    border-color: #38BDF8 !important;
-    box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.25) !important;
-    background: rgba(11, 15, 25, 0.95) !important;
+    border-color: var(--primary-blue) !important;
+    box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.15) !important;
 }
 
-/* Sharp Neon Cyan-Indigo Action Button */
-.neon-action-btn {
-    background: linear-gradient(135deg, #06B6D4 0%, #3B82F6 50%, #8B5CF6 100%) !important;
+/* Action Buttons */
+.travel-btn-primary {
+    background: linear-gradient(135deg, #0284C7 0%, #2563EB 50%, #4F46E5 100%) !important;
     color: #FFFFFF !important;
     font-weight: 700 !important;
     font-size: 1.05rem !important;
     border: none !important;
     border-radius: 12px !important;
     padding: 14px 24px !important;
-    box-shadow: 0 0 22px rgba(6, 182, 212, 0.38) !important;
-    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    box-shadow: 0 4px 14px rgba(2, 132, 199, 0.3) !important;
     cursor: pointer !important;
+    transition: all 0.2s ease !important;
 }
 
-.neon-action-btn:hover {
+.travel-btn-primary:hover {
     transform: translateY(-2px) !important;
-    box-shadow: 0 0 32px rgba(59, 130, 246, 0.6), 0 0 12px rgba(6, 182, 212, 0.8) !important;
-    filter: brightness(1.08) !important;
+    box-shadow: 0 6px 20px rgba(2, 132, 199, 0.45) !important;
 }
 
-.neon-action-btn:active {
-    transform: translateY(0px) !important;
-}
-
-/* Geometric Quick Preset Chips */
-.geo-chip-btn {
-    background: rgba(22, 30, 48, 0.7) !important;
-    border: 1px solid rgba(59, 130, 246, 0.2) !important;
-    color: #CBD5E1 !important;
+.travel-btn-pdf {
+    background: #0284C7 !important;
+    color: #FFFFFF !important;
+    font-weight: 600 !important;
     border-radius: 8px !important;
-    font-size: 0.84rem !important;
+    border: none !important;
+    transition: all 0.2s ease !important;
+}
+
+.travel-btn-pdf:hover {
+    background: #0369A1 !important;
+    transform: translateY(-1px) !important;
+}
+
+/* Quick Feedback Preset Chips */
+.travel-chip {
+    background: #F1F5F9 !important;
+    border: 1px solid #CBD5E1 !important;
+    color: #334155 !important;
+    font-weight: 500 !important;
+    border-radius: 8px !important;
+    font-size: 0.85rem !important;
     padding: 8px 12px !important;
     transition: all 0.2s ease !important;
 }
 
-.geo-chip-btn:hover {
-    background: rgba(59, 130, 246, 0.2) !important;
+.travel-chip:hover {
+    background: #E0F2FE !important;
     border-color: #38BDF8 !important;
-    color: #FFFFFF !important;
+    color: #0369A1 !important;
     transform: translateY(-1px) !important;
-    box-shadow: 0 0 10px rgba(56, 189, 248, 0.25) !important;
 }
 
-/* Semi-transparent Modern Toast / Notification */
-.architect-toast {
-    position: relative;
-    border-radius: 12px;
-    padding: 18px 20px;
-    margin: 14px 0;
-    backdrop-filter: blur(16px);
+/* Quick Booking Hub Container */
+.booking-hub {
+    background: linear-gradient(135deg, #F0F9FF 0%, #EEF2FF 100%);
+    border: 1px solid #BAE6FD;
+    border-radius: 14px;
+    padding: 16px 20px;
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+.booking-hub-title {
+    font-weight: 700;
+    color: #0369A1;
+    font-size: 0.98rem;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.booking-links-group {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.booking-link-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 7px 14px;
+    border-radius: 8px;
+    font-size: 0.86rem;
+    font-weight: 600;
+    text-decoration: none !important;
+    background: #FFFFFF;
+    border: 1px solid #CBD5E1;
+    color: #0F172A !important;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    transition: all 0.2s ease;
+}
+
+.booking-link-btn:hover {
+    border-color: #0284C7;
+    color: #0284C7 !important;
+    transform: translateY(-1px);
+    box-shadow: 0 3px 8px rgba(2, 132, 199, 0.15);
+}
+
+/* Alert Notification Banners */
+.travel-alert {
     display: flex;
     gap: 14px;
-    animation: toastSlide 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    padding: 16px 20px;
+    border-radius: 12px;
+    margin: 14px 0;
+    border: 1px solid #BAE6FD;
+    background: #F0F9FF;
 }
 
-@keyframes toastSlide {
-    from { opacity: 0; transform: translateY(-8px); }
-    to { opacity: 1; transform: translateY(0); }
+.alert-fallback {
+    background: #F0FDF4;
+    border-color: #BBF7D0;
 }
 
-.toast-fallback {
-    background: rgba(14, 165, 233, 0.08);
-    border: 1px solid rgba(56, 189, 248, 0.3);
-    box-shadow: 0 8px 24px rgba(6, 182, 212, 0.12);
+.alert-error {
+    background: #FEF2F2;
+    border-color: #FECACA;
 }
 
-.toast-error {
-    background: rgba(239, 68, 68, 0.08);
-    border: 1px solid rgba(239, 68, 68, 0.32);
-    box-shadow: 0 8px 24px rgba(239, 68, 68, 0.12);
-}
-
-.toast-indicator {
-    width: 4px;
-    border-radius: 4px;
-    background: #06B6D4;
-    box-shadow: 0 0 10px #06B6D4;
+.alert-icon-box {
+    font-size: 1.5rem;
+    width: 38px;
+    height: 38px;
+    border-radius: 10px;
+    background: #DCFCE7;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     flex-shrink: 0;
 }
 
-.error-indicator {
-    background: #EF4444;
-    box-shadow: 0 0 10px #EF4444;
+.alert-icon-box.error-icon {
+    background: #FEE2E2;
 }
 
-.toast-body {
+.alert-content {
     flex: 1;
 }
 
-.toast-header-text {
+.alert-title {
+    margin: 0 0 4px 0;
     font-weight: 700;
     font-size: 0.98rem;
-    color: #F8FAFC;
-    margin-bottom: 4px;
+    color: #0F172A;
 }
 
-.toast-detail {
+.alert-desc {
     margin: 0;
     font-size: 0.9rem;
-    color: #CBD5E1;
+    color: #334155;
     line-height: 1.5;
 }
 
-.toast-action-box {
+.alert-tips {
     margin-top: 8px;
     padding: 10px 12px;
-    background: rgba(11, 15, 25, 0.7);
+    background: #FFFFFF;
     border-radius: 8px;
-    border: 1px solid rgba(255, 255, 255, 0.06);
+    border: 1px solid #FECACA;
     font-size: 0.88rem;
-    color: #94A3B8;
+    color: #475569;
 }
 
-/* Blueprint Rendered Itinerary Markdown Styling */
-.rendered-blueprint table {
+/* Rendered Itinerary Markdown Styling - Crisp & High Contrast */
+.rendered-travel-itinerary {
+    color: var(--text-body) !important;
+    line-height: 1.65 !important;
+}
+
+.rendered-travel-itinerary h1 {
+    font-size: 1.8rem;
+    font-weight: 800;
+    color: #0284C7 !important;
+    border-bottom: 2px solid #E2E8F0;
+    padding-bottom: 8px;
+    margin-top: 10px;
+}
+
+.rendered-travel-itinerary h2 {
+    font-size: 1.35rem;
+    font-weight: 750;
+    color: #0F172A !important;
+    margin-top: 24px;
+    margin-bottom: 12px;
+}
+
+.rendered-travel-itinerary h3 {
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: #2563EB !important;
+    margin-top: 18px;
+    margin-bottom: 8px;
+}
+
+.rendered-travel-itinerary table {
     width: 100%;
-    border-collapse: separate;
-    border-spacing: 0;
-    margin: 18px 0;
+    border-collapse: collapse;
+    margin: 16px 0;
     border-radius: 10px;
     overflow: hidden;
-    border: 1px solid rgba(59, 130, 246, 0.22);
+    border: 1px solid #CBD5E1;
+    background: #FFFFFF;
 }
 
-.rendered-blueprint th {
-    background: rgba(22, 30, 48, 0.95) !important;
-    color: #93C5FD !important;
+.rendered-travel-itinerary th {
+    background: #F1F5F9 !important;
+    color: #0F172A !important;
     font-weight: 700;
     padding: 12px 14px;
     text-align: left;
-    border-bottom: 1px solid rgba(59, 130, 246, 0.2);
+    border-bottom: 2px solid #CBD5E1;
     font-size: 0.92rem;
 }
 
-.rendered-blueprint td {
+.rendered-travel-itinerary td {
     padding: 12px 14px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.04);
-    color: #CBD5E1;
-    background: rgba(11, 15, 25, 0.45);
+    border-bottom: 1px solid #E2E8F0;
+    color: #1E293B !important;
     font-size: 0.92rem;
 }
 
-.rendered-blueprint tr:last-child td {
-    border-bottom: none;
+.rendered-travel-itinerary tr:nth-child(even) td {
+    background: #F8FAFC;
 }
 
-.rendered-blueprint tr:hover td {
-    background: rgba(59, 130, 246, 0.1);
+.rendered-travel-itinerary tr:hover td {
+    background: #EFF6FF;
+}
+
+.rendered-travel-itinerary a {
+    color: #0284C7 !important;
+    font-weight: 600;
+    text-decoration: underline;
+}
+
+.rendered-travel-itinerary a:hover {
+    color: #0369A1 !important;
 }
 """
 
 app_theme = gr.themes.Soft(
-    primary_hue="blue",
-    secondary_hue="cyan",
+    primary_hue="sky",
+    secondary_hue="blue",
     neutral_hue="slate",
 )
 
 
 # =====================================================================
-# Gradio UI Layout (Architect Blueprint & Geometric Glassmorphism)
+# Gradio UI Layout (High-Contrast Collaborative Travel Workspace)
 # =====================================================================
-with gr.Blocks(title="자율형 여행 아키텍트 | Gemini Blueprint 4.0") as demo:
+with gr.Blocks(title="친구들과 함께 떠나는 여행 아키텍트") as demo:
     
     session_state = gr.State({})
 
-    # Header: Geometric Blueprint Compass & Clean Typography
+    # Header: Welcoming, Modern Travel Workspace
     gr.HTML("""
-    <div class="blueprint-header">
-        <div class="blueprint-badge-row">
-            <span class="blueprint-pill"><span class="pill-active-dot"></span> BLUEPRINT ENGINE v4.2</span>
-            <span class="blueprint-pill">📐 GEOMETRIC ROUTE OPTIMIZER</span>
-            <span class="blueprint-pill">⚡ DEFAULT: GEMINI 3.8 FLASH</span>
-            <span class="blueprint-pill">🔄 HITL RE-VERIFIED</span>
+    <div class="travel-header">
+        <div class="travel-badge-row">
+            <span class="travel-pill">👥 동행자 실시간 조율</span>
+            <span class="travel-pill green">🔗 원클릭 예약 링크 탑재</span>
+            <span class="travel-pill">📄 정밀 PDF 리포트 다운로드</span>
+            <span class="travel-pill">⚡ Powered by Gemini 3.8 Flash</span>
         </div>
-        <h1 class="blueprint-title">AGENTIC TRAVEL ARCHITECT</h1>
-        <p class="blueprint-subtitle">
-            Google DeepMind AI Hackathon • 건축 청사진 기법 기반의 정밀 지리·예산 심층 추론 및 자율 재검증 시스템
+        <h1 class="travel-title">✈️ 우리들의 맞춤 여행 아키텍트</h1>
+        <p class="travel-subtitle">
+            Google DeepMind AI Hackathon • 친구들과 함께 계획하고 원클릭으로 예약하는 스마트 여행 청사진 플랫폼
         </p>
     </div>
     """)
@@ -764,15 +1058,15 @@ with gr.Blocks(title="자율형 여행 아키텍트 | Gemini Blueprint 4.0") as 
         # -------------------------------------------------------------
         # Tab 1: Input & Architect Launch (Proportion 1 : 1.2)
         # -------------------------------------------------------------
-        with gr.TabItem("📐 1. 여행 청사진 조건 설정 및 자료 업로드", id=0):
+        with gr.TabItem("🛫 1. 여행 조건 설정 및 가이드북 업로드", id=0):
             with gr.Row():
                 # Left Column: User Input Form (Scale: 5)
-                with gr.Column(scale=5, elem_classes=["blueprint-panel"]):
-                    gr.HTML('<div class="geo-header"><span class="geo-node"></span> 여행 기본 정보 설계 (Specification)</div>')
+                with gr.Column(scale=5, elem_classes=["travel-card"]):
+                    gr.HTML('<div class="section-title">📍 여행 기본 정보 설계</div>')
                     
                     destination_input = gr.Textbox(
                         label="여행 목적지 (도시 / 국가)",
-                        placeholder="예: 일본 도쿄 / 프랑스 파리 & 니스 / 제주도 서귀포",
+                        placeholder="예: 일본 도쿄 / 프랑스 파리 / 제주도 서귀포",
                         value="일본 도쿄"
                     )
                     with gr.Row():
@@ -790,30 +1084,30 @@ with gr.Blocks(title="자율형 여행 아키텍트 | Gemini Blueprint 4.0") as 
                         )
                     
                     style_checkboxes = gr.CheckboxGroup(
-                        label="🎯 여행 스타일 (다중 선택 가능)",
+                        label="🎯 친구들과 원하는 여행 스타일 (다중 선택 가능)",
                         choices=[
-                            "🌿 힐링/휴식",
-                            "🍜 미식/맛집 탐방",
-                            "🎨 문화/예술/미술관",
-                            "🏛️ 역사/유적 탐방",
+                            "🌿 힐링/휴식 & 감성 카페",
+                            "🍜 미식/맛집 투어",
+                            "🎨 문화/예술 & 미술관",
+                            "🏛️ 역사/랜드마크 탐방",
                             "🛍️ 쇼핑/핫플레이스",
                             "🏔️ 자연/풍경 감상",
                             "🏄 액티비티/체험",
-                            "📸 사진/인스타 스팟",
+                            "📸 인생샷/인스타 스팟",
                         ],
-                        value=["🍜 미식/맛집 탐방", "🎨 문화/예술/미술관", "🛍️ 쇼핑/핫플레이스"]
+                        value=["🍜 미식/맛집 투어", "🌿 힐링/휴식 & 감성 카페", "🛍️ 쇼핑/핫플레이스"]
                     )
                     
                     custom_notes_input = gr.Textbox(
-                        label="✍️ 특별 요구사항 및 동행자 제약 조건",
-                        placeholder="예: '부모님과 함께 가니 하루 1만보 이내로 걷기', '대중교통 환승 최소화'",
+                        label="✍️ 친구들의 특별 요청 및 동행자 조건",
+                        placeholder="예: '하루 1만보 이내로 걷기', '늦잠 자고 11시부터 시작', '야식 라멘 필수'",
                         lines=3,
-                        value="하루 최대 도보 12,000보 이내, 대중교통 접근성 높은 핫플레이스와 현지인 추천 맛집 위주"
+                        value="동행 친구들과 여유로운 힐링 여행, 이동 동선 최단화, 핫플레이스 맛집 필수 포함"
                     )
 
                 # Right Column: Guidebook & Model Configuration (Scale: 6)
-                with gr.Column(scale=6, elem_classes=["blueprint-panel"]):
-                    gr.HTML('<div class="geo-header"><span class="geo-node"></span> 가이드북 및 아키텍트 모델 설정</div>')
+                with gr.Column(scale=6, elem_classes=["travel-card"]):
+                    gr.HTML('<div class="section-title">📄 가이드북 및 아키텍트 모델 설정</div>')
                     
                     guide_file_input = gr.File(
                         label="가이드북 파일 또는 메모 업로드 (PDF, TXT, MD)",
@@ -851,47 +1145,63 @@ with gr.Blocks(title="자율형 여행 아키텍트 | Gemini Blueprint 4.0") as 
                             )
                     
                     generate_btn = gr.Button(
-                        "🚀 자율형 여행 청사진 설계 시작 (Launch Architect)",
-                        elem_classes=["neon-action-btn"],
+                        "🚀 친구들과 떠날 맞춤 여행 청사진 설계 시작",
+                        elem_classes=["travel-btn-primary"],
                         size="lg"
                     )
 
         # -------------------------------------------------------------
-        # Tab 2: Output & Human-in-the-Loop Revision (Proportion 1 : 1.2)
+        # Tab 2: Output & Human-in-the-Loop Revision & Booking
         # -------------------------------------------------------------
-        with gr.TabItem("🗺️ 2. 종합 청사진 확인 및 대화형 수정 (HITL)", id=1):
+        with gr.TabItem("🗺️ 2. 종합 청사진 확인 & 실시간 예약 (HITL)", id=1):
             
+            # Interactive Quick Booking Hub
+            gr.HTML("""
+            <div class="booking-hub">
+                <div class="booking-hub-title">
+                    <span>🔗 원클릭 여행 예약 & 길찾기 허브</span>
+                </div>
+                <div class="booking-links-group">
+                    <a href="https://www.skyscanner.co.kr" target="_blank" class="booking-link-btn">✈️ 항공권 최저가 비교 (스카이스캐너)</a>
+                    <a href="https://www.agoda.com" target="_blank" class="booking-link-btn">🏨 숙소 예약 (아고다)</a>
+                    <a href="https://www.airbnb.co.kr" target="_blank" class="booking-link-btn">🏡 감성 에어비앤비</a>
+                    <a href="https://www.klook.com" target="_blank" class="booking-link-btn">🎟️ 투어 & 입장권 (클룩)</a>
+                    <a href="https://maps.google.com" target="_blank" class="booking-link-btn">🗺️ 실시간 구글 지도</a>
+                </div>
+            </div>
+            """)
+
             top_status_bar = gr.Markdown("💡 **안내:** 1단계 탭에서 조건을 설정하고 [청사진 설계 시작]을 누르면 완성된 일정이 여기에 표시됩니다.")
 
             with gr.Row():
                 # Left Column: Human-in-the-Loop Feedback Controls (Scale: 5)
-                with gr.Column(scale=5, elem_classes=["blueprint-panel"]):
-                    gr.HTML('<div class="geo-header"><span class="geo-node"></span> Human-in-the-Loop 피드백 및 재검증</div>')
-                    gr.Markdown("설계된 청사진을 점검하고 수정 피드백을 전달하세요. 아키텍트가 동선 및 예산 충돌을 재검증(Verify)하여 일정을 즉각 재배치합니다.")
+                with gr.Column(scale=5, elem_classes=["travel-card"]):
+                    gr.HTML('<div class="section-title">🧑‍💻 친구들과 의견 조율 (HITL 대화형 수정)</div>')
+                    gr.Markdown("일정을 확인하고 변경 사항을 입력하세요. 아키텍트가 동선과 예산 충돌을 재검증하여 일정을 즉시 갱신합니다.")
                     
                     feedback_box = gr.Textbox(
                         label="수정 요청 사항 (Feedback Prompt)",
-                        placeholder="예: '2일차 오후에 비가 올 예정이니 실내 미술관과 복합 쇼핑몰 코스로 변경해 줘'",
+                        placeholder="예: '2일차 오후에 비 온다고 하니 실내 미술관과 쇼핑몰 코스로 바꿔줘' 또는 '오전에 늦잠 잘 거니까 11시 시작으로 여유롭게 변경해줘'",
                         lines=3
                     )
                     
-                    gr.Markdown("**⚡ 빠른 피드백 프리셋 (Quick Presets):**")
+                    gr.Markdown("**⚡ 단톡방 단골 요청 프리셋 (Quick Presets):**")
                     with gr.Row():
-                        preset_btn1 = gr.Button("🌧️ 2일차 실내 코스 전환", elem_classes=["geo-chip-btn"], size="sm")
-                        preset_btn2 = gr.Button("💰 가성비 식당 위주 변경", elem_classes=["geo-chip-btn"], size="sm")
+                        preset_btn1 = gr.Button("🌧️ 2일차 실내 코스 전환", elem_classes=["travel-chip"], size="sm")
+                        preset_btn2 = gr.Button("💰 가성비 식당 위주 변경", elem_classes=["travel-chip"], size="sm")
                     with gr.Row():
-                        preset_btn3 = gr.Button("☕ 일정 여유롭게 완화", elem_classes=["geo-chip-btn"], size="sm")
-                        preset_btn4 = gr.Button("🏃 액티비티/체험 확대", elem_classes=["geo-chip-btn"], size="sm")
+                        preset_btn3 = gr.Button("☕ 오전 늦잠 여유 코스", elem_classes=["travel-chip"], size="sm")
+                        preset_btn4 = gr.Button("📸 인스타 핫플/카페 확대", elem_classes=["travel-chip"], size="sm")
 
                     verify_btn = gr.Button(
                         "🔄 피드백 반영 및 청사진 재검증 (Verify & Update)",
-                        elem_classes=["neon-action-btn"],
+                        elem_classes=["travel-btn-primary"],
                         size="lg"
                     )
 
-                    with gr.Accordion("💬 수정 대화 기록 (HITL Conversation)", open=True):
+                    with gr.Accordion("💬 친구들과 나눈 수정 대화 내역", open=True):
                         chatbot_view = gr.Chatbot(
-                            label="아키텍트 피드백 대화 내역",
+                            label="아키텍트 대화 로그",
                             height=250
                         )
 
@@ -899,17 +1209,79 @@ with gr.Blocks(title="자율형 여행 아키텍트 | Gemini Blueprint 4.0") as 
                         thinking_log_box = gr.Markdown("아키텍트의 심층 추론 과정이 여기에 기록됩니다.")
 
                 # Right Column: Rendered Blueprint & Download (Scale: 6)
-                with gr.Column(scale=6, elem_classes=["blueprint-panel"]):
+                with gr.Column(scale=6, elem_classes=["travel-card"]):
                     with gr.Row():
-                        gr.HTML('<div class="geo-header"><span class="geo-node"></span> 최신 종합 여행 청사진 (Blueprint)</div>')
-                        export_btn = gr.Button("💾 청사진 마크다운(.md) 다운로드", size="sm", elem_classes=["geo-chip-btn"])
+                        gr.HTML('<div class="section-title">📋 최신 종합 여행 청사진</div>')
+                        with gr.Row():
+                            pdf_btn = gr.Button("📄 PDF 다운로드", size="sm", elem_classes=["travel-btn-pdf"])
+                            export_btn = gr.Button("💾 마크다운(.md) 저장", size="sm", elem_classes=["travel-chip"])
                     
                     download_file_component = gr.File(label="다운로드 파일", visible=False)
                     
                     itinerary_display = gr.Markdown(
                         value="*아직 생성된 일정이 없습니다. 1단계 탭에서 조건을 설정하고 설계를 시작해 주세요.*",
-                        elem_classes=["rendered-blueprint"]
+                        elem_classes=["rendered-travel-itinerary"]
                     )
+
+        # -------------------------------------------------------------
+        # Tab 3: Friends Hub & Checklist (Interactive Collaborative Space)
+        # -------------------------------------------------------------
+        with gr.TabItem("👥 3. 동행자 조율 & 준비물 체크리스트", id=2):
+            with gr.Row():
+                # Left Column: Interactive Packing Checklist
+                with gr.Column(scale=6, elem_classes=["travel-card"]):
+                    gr.HTML('<div class="section-title">📝 여행 필수 준비물 체크리스트</div>')
+                    gr.Markdown("친구들과 짐 싸면서 빠뜨린 게 없는지 함께 체크해 보세요!")
+                    
+                    with gr.Accordion("🛂 필수 서류 & 금융", open=True):
+                        gr.Checkbox(label="여권 (만료일 6개월 이상 남았는지 확인)", value=True)
+                        gr.Checkbox(label="트래블로그 / 트래블월렛 해외 결제 카드", value=True)
+                        gr.Checkbox(label="현지 통화 비상금 (엔화/유로/달러 등 환전)", value=False)
+                        gr.Checkbox(label="항공권 E-티켓 및 숙소 바우처 모바일 저장", value=False)
+                    
+                    with gr.Accordion("📱 통신 & 전자기기", open=True):
+                        gr.Checkbox(label="eSIM / 유심 사전 등록 및 개통 확인", value=True)
+                        gr.Checkbox(label="보조배터리 (비행기 기내 수하물 지참)", value=True)
+                        gr.Checkbox(label="현지 국가용 전원 멀티어댑터 (돼지코 110V 등)", value=False)
+                        gr.Checkbox(label="충전 케이블 및 이어폰", value=False)
+                    
+                    with gr.Accordion("💊 건강 & 상비약", open=False):
+                        gr.Checkbox(label="소화제 / 두통약 / 감기약 / 밴드", value=False)
+                        gr.Checkbox(label="개인 복용약 및 인공눈물", value=False)
+                    
+                    with gr.Accordion("👕 의류 & 편의용품", open=False):
+                        gr.Checkbox(label="많이 걸어도 편한 운동화", value=True)
+                        gr.Checkbox(label="휴대용 우산 / 우비 (갑작스러운 날씨 대비)", value=False)
+                        gr.Checkbox(label="선크림 및 여행용 세면도구", value=False)
+
+                # Right Column: Group Poll & Shareable Summary
+                with gr.Column(scale=5, elem_classes=["travel-card"]):
+                    gr.HTML('<div class="section-title">🗳️ 친구들과 코스 취향 투표 (Quick Poll)</div>')
+                    gr.Markdown("친구들과 의견이 갈릴 때 가볍게 투표하고 결과를 일정에 반영하세요!")
+                    
+                    poll_food = gr.Radio(
+                        label="🍜 이번 여행 식사 스타일 선호도",
+                        choices=["현지인 가성비 로컬 맛집 위주", "분위기 좋은 미슐랭/파인다이닝", "길거리 음식 & 야시장 탐방"],
+                        value="현지인 가성비 로컬 맛집 위주"
+                    )
+                    poll_pace = gr.Radio(
+                        label="🏃 여행 페이스 선호도",
+                        choices=["빡빡하게 핵심 명소 모두 정복", "여유롭게 늦잠 자고 카페에서 힐링", "포토스팟 & 쇼핑 몰빵"],
+                        value="여유롭게 늦잠 자고 카페에서 힐링"
+                    )
+                    
+                    apply_poll_btn = gr.Button("✨ 투표 결과를 피드백 입력창에 자동 반영", elem_classes=["travel-chip"])
+                    
+                    gr.HTML('<hr style="margin: 20px 0; border: none; border-top: 1px solid #E2E8F0;">')
+                    
+                    gr.HTML('<div class="section-title">📲 단톡방 공유용 요약 카드</div>')
+                    share_summary_box = gr.Textbox(
+                        label="카카오톡/단톡방 복사용 텍스트",
+                        lines=5,
+                        interactive=False,
+                        placeholder="일정이 생성되면 친구들에게 보낼 수 있는 요약본이 여기에 생성됩니다."
+                    )
+                    make_summary_btn = gr.Button("📋 단톡방 공유 텍스트 생성하기", elem_classes=["travel-chip"])
 
     # =============================================================
     # Event Handlers & Interactivity
@@ -933,10 +1305,27 @@ with gr.Blocks(title="자율형 여행 아키텍트 | Gemini Blueprint 4.0") as 
     # 2. Quick Preset Buttons
     preset_btn1.click(lambda: "2일차 오후에 비가 올 것으로 예상되므로, 야외 이동을 최소화하고 실내 미술관/전시 및 복합 문화 쇼핑몰 중심의 실내 코스로 변경해 줘.", outputs=[feedback_box])
     preset_btn2.click(lambda: "전체 일정의 식당을 현지인들이 즐겨 찾는 가성비 로컬 맛집 위주로 변경하고 식비 예산을 20% 절감해 줘.", outputs=[feedback_box])
-    preset_btn3.click(lambda: "일정이 다소 빡빡해 보입니다. 각 장소 체류 시간을 늘리고 카페 휴식 시간을 포함하여 여유로운 힐링 일정으로 완화해 줘.", outputs=[feedback_box])
-    preset_btn4.click(lambda: "관광지 단순 관람 대신 현지 원데이 클래스나 액티비티 체험 코스의 비중을 대폭 확대해 줘.", outputs=[feedback_box])
+    preset_btn3.click(lambda: "친구들이 오전에 늦잠을 자고 싶어 합니다. 오전 일정을 11시 시작으로 여유롭게 완화하고 카페 휴식 시간을 넉넉히 배치해 줘.", outputs=[feedback_box])
+    preset_btn4.click(lambda: "관광지 단순 관람 대신 인스타그램 핫플레이스 카페 및 인생샷 포토스팟의 비중을 대폭 확대해 줘.", outputs=[feedback_box])
 
-    # 3. Initial Itinerary Generation
+    # 3. Group Poll to Feedback
+    def apply_poll_to_feedback(food_val, pace_val):
+        return f"친구들과 투표 결과 식사는 '{food_val}' 스타일로, 여행 페이스는 '{pace_val}' 스타일로 정했습니다. 이 취향을 최우선 반영하여 일정을 재검증해 주세요!"
+
+    apply_poll_btn.click(
+        fn=apply_poll_to_feedback,
+        inputs=[poll_food, poll_pace],
+        outputs=[feedback_box]
+    )
+
+    # 4. Generate Shareable Summary
+    make_summary_btn.click(
+        fn=generate_shareable_summary,
+        inputs=[session_state],
+        outputs=[share_summary_box]
+    )
+
+    # 5. Initial Itinerary Generation
     generate_btn.click(
         fn=generate_initial_itinerary,
         inputs=[
@@ -961,7 +1350,7 @@ with gr.Blocks(title="자율형 여행 아키텍트 | Gemini Blueprint 4.0") as 
         ]
     )
 
-    # 4. Human-in-the-Loop Feedback & Verification
+    # 6. Human-in-the-Loop Feedback & Verification
     verify_btn.click(
         fn=update_itinerary_with_feedback,
         inputs=[feedback_box, session_state],
@@ -975,9 +1364,16 @@ with gr.Blocks(title="자율형 여행 아키텍트 | Gemini Blueprint 4.0") as 
         ]
     )
 
-    # 5. Export Itinerary
+    # 7. Export PDF
+    pdf_btn.click(
+        fn=export_pdf_file,
+        inputs=[session_state],
+        outputs=[download_file_component]
+    )
+
+    # 8. Export Markdown
     export_btn.click(
-        fn=export_itinerary_to_file,
+        fn=export_markdown_file,
         inputs=[session_state],
         outputs=[download_file_component]
     )

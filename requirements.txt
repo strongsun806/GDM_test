@@ -1,4 +1,5 @@
 google-genai>=2.30.1
 gradio>=6.0.0
 pypdf>=4.0.0
+reportlab>=4.0.0
 python-dotenv>=1.0.0
