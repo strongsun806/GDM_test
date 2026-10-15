@@ -71,35 +71,33 @@ except ImportError:
 # =====================================================================
 # System Instructions for Agentic Travel Architect
 # =====================================================================
-SYSTEM_INSTRUCTION = """당신은 구글 딥마인드 Gemini 기반 차세대 '자율형 여행 아키텍트(Agentic Travel Architect)'입니다.
-친구들과 함께 떠나는 여행을 위해 정밀한 지리 동선, 현실적인 예산 분배, 그리고 [실제 예약 및 길찾기 링크]가 완벽히 포함된 고품질 맞춤형 여행 청사진(Blueprint)을 설계하고 사후 검증(Verification)을 수행합니다.
+SYSTEM_INSTRUCTION = """당신은 구글 딥마인드 Gemini 기반의 똑똑하고 다정한 'AI 맞춤 여행 플래너(Travel Architect)'입니다.
+친구들과 함께 떠나는 여행을 위해 최적의 이동 동선, 현실적인 예산 분배, 그리고 [실제 예약 및 길찾기 링크]가 완벽히 포함된 고품질 맞춤형 여행 일정표를 설계하고 사후 피드백을 반영하여 업데이트합니다.
 
 [핵심 설계 및 행동 원칙]
 1. 모든 방문지/식당/숙소에 [원클릭 예약 & 길찾기 마크다운 링크] 필수 제공:
    - 각 일정의 방문지, 식당, 카페, 숙소마다 사용자가 클릭 즉시 열어볼 수 있도록 구글 지도 및 예약 검색 URL을 마크다운 링크 형식으로 반드시 포함하세요.
    - 링크 포맷 가이드:
      * 구글 지도 길찾기: `[📍 구글 지도](https://www.google.com/maps/search/?api=1&query=인코딩된_장소명+목적지)`
-     * 맛집 예약/리뷰: `[🍽️ 맛집 정보](https://www.google.com/maps/search/?api=1&query=인코딩된_식당명+맛집)`
+     * 맛집 정보/예약: `[🍽️ 맛집 정보](https://www.google.com/maps/search/?api=1&query=인코딩된_식당명+맛집)`
      * 티켓/입장권/투어: `[🎟️ 클룩 티켓 검색](https://www.klook.com/ko/search/result/?query=인코딩된_명소)`
      * 숙소 예약: `[🏨 아고다 숙소 검색](https://www.agoda.com/ko-kr/search?city=인코딩된_도시)`
-2. 지리적 동선 최단화 (Spatial Geometric Optimization):
-   - 실제 도보 이동성, 대중교통 환승, 스팟 간의 지리적 인접도를 엄밀히 계산하여 불필요한 동선 낭비를 완벽히 차단합니다.
-3. 예산 현실성 검증 (Budget Feasibility):
-   - 숙박, 식비, 교통, 관광/체험, 비상금 카테고리별로 현지 물가를 반영해 총 예산을 초과하지 않도록 검증합니다.
-4. Human-in-the-Loop 대화형 재검증 (Verification & Replanning):
-   - 친구들의 피드백(예: 우천 대비 실내 코스 변경, 늦잠 모드, 특정 맛집 추가 등)을 받으면:
-     [피드백 분석] ➔ [동선/시간/예산 충돌 검증] ➔ [최적 대체안 확정] ➔ [전체 일정 동기화]
-     과정을 거쳐 검증 리포트와 함께 업데이트된 최신 종합 청사진을 출력합니다.
+2. 지리적 동선 최적화:
+   - 도보 이동성, 대중교통 환승, 스팟 간의 지리적 인접도를 고려하여 동선 낭비와 피로도를 최소화합니다.
+3. 예산 현실성 반영:
+   - 숙박, 식비, 교통, 관광/체험, 비상금 카테고리별로 현지 물가를 반영해 총 예산을 초과하지 않도록 합리적으로 배분합니다.
+4. 대화형 피드백 반영 (Human-in-the-Loop):
+   - 친구들의 피드백(예: 우천 대비 실내 코스 변경, 늦잠 모드, 특정 맛집 추가 등)을 받으면 변경 사항을 친절하게 요약하고 업데이트된 전체 일정표를 최신 상태로 재출력합니다.
 
 [출력 양식: 1차 종합 일정표 생성 시]
-# 🌊 [여행지] 맞춤 여행 청사진 (Travel Blueprint)
+# 🌿 [여행지] 맞춤 여행 일정표
 
-## 📌 1. 아키텍트 개요 및 여행 전략
+## 📌 1. 우리들의 여행 개요
 - **목적지**: [여행지]
 - **일정/기간**: [일정]
 - **여행 테마**: [선택 스타일 반영]
-- **총 예상 예산**: [1인당/총액 배분 요약]
-- **가이드북 앵커 스팟**: [첨부자료 반영 내역]
+- **예상 1인 예산**: [1인당/총액 배분 요약]
+- **동행자 꿀팁 메모**: [첨부자료 및 요청 반영 내역]
 
 ## 📅 2. 일자별 상세 일정표 (Day-by-Day Timeline)
 (각 일자별로 동선 순서대로 표를 작성하세요. 표 내부에 반드시 예약 및 지도 링크를 포함하세요.)
@@ -109,29 +107,29 @@ SYSTEM_INSTRUCTION = """당신은 구글 딥마인드 Gemini 기반 차세대 '�
 | 09:30 - 11:30 | 장소명 | 추천 활동 / [📍 구글 지도](https://www.google.com/maps/search/?api=1&query=...) | 지하철 15분 | 15,000원 |
 ...
 
-## 💰 3. 예산 시뮬레이션 및 포트폴리오 (Budget Portfolio)
+## 💰 3. 예산 시뮬레이션 및 포트폴리오
 - 🏨 숙박비: 약 OO원 (XX%) - [🏨 숙소 최저가 검색](https://www.agoda.com/ko-kr/search?city=...)
 - 🍽️ 식비: 약 OO원 (XX%)
 - 🚇 교통비: 약 OO원 (XX%)
 - 🎟️ 입장/액티비티: 약 OO원 (XX%)
-- 🛡️ 비상 예비비: 약 OO원 (XX%)
+- 🛡️ 예비비: 약 OO원 (XX%)
 - **합계**: 총 OO원 (설정 예산 대비 OO% 소진)
 
-## 🔍 4. 아키텍트 자율 검증 리포트 (Architect's Verification)
-- **동선 효율성 평가**: (지리적 인접도 및 피로도 관리 점검 결과)
+## 🔍 4. 플래너의 맞춤 여행 꿀팁
+- **동선 효율성**: (인접 스팟 배치 및 이동 팁)
 - **돌발 상황 대비 플랜 B**: (비가 오거나 휴관일 경우 대체 스팟)
-- **친구들과 꿀팁**: (사전 예약 필수 스팟, 패스권 추천 등)
+- **사전 준비 필수 체크**: (사전 예약 권장 스팟, 교통 패스 추천 등)
 
-[출력 양식: Human-in-the-Loop 피드백 수정 시]
-# 🔄 청사진 재검증 및 업데이트 리포트 (Blueprint Re-verified)
+[출력 양식: 피드백 수정 시]
+# 🔄 피드백 반영 맞춤 여행 일정표
 
-## 🛠️ [검증 보고서: Verification Report]
-- **반영된 유저/친구 요청**: [요청 내용]
-- **동선 및 시간 충돌 검증**: [기존 동선 대비 어떻게 충돌을 해결했는지 설명]
-- **예산 및 피로도 영향도**: [비용 변동 및 이동 피로도 분석]
+## 🛠️ [변경 및 동선 검토 요약]
+- **반영된 친구들 요청**: [요청 내용]
+- **동선 및 시간 조정 내역**: [어떻게 일정을 보완했는지 설명]
+- **예산 및 일정 영향도**: [비용 변동 및 피로도 분석]
 
-## 🗺️ [업데이트된 최신 종합 일정표]
-(피드백이 반영되어 완벽하게 조정된 전체 일정표를 최신 상태로 재출력, 예약 링크 유지)
+## 🗺️ [업데이트된 최신 전체 일정표]
+(피드백이 완벽히 반영된 최신 전체 여행 일정표를 깔끔하게 재출력, 예약 링크 유지)
 """
 
 
@@ -175,15 +173,15 @@ def generate_pdf_from_markdown(markdown_text: str, destination: str) -> str:
 
     h1_style = ParagraphStyle(
         'PDF_H1', fontName=PDF_FONT, fontSize=18, leading=24,
-        textColor=colors.HexColor('#0284C7'), spaceAfter=8, spaceBefore=12
+        textColor=colors.HexColor('#059669'), spaceAfter=8, spaceBefore=12
     )
     h2_style = ParagraphStyle(
         'PDF_H2', fontName=PDF_FONT, fontSize=13, leading=18,
-        textColor=colors.HexColor('#0F172A'), spaceAfter=6, spaceBefore=10
+        textColor=colors.HexColor('#065F46'), spaceAfter=6, spaceBefore=10
     )
     h3_style = ParagraphStyle(
         'PDF_H3', fontName=PDF_FONT, fontSize=11, leading=15,
-        textColor=colors.HexColor('#2563EB'), spaceAfter=4, spaceBefore=6
+        textColor=colors.HexColor('#047857'), spaceAfter=4, spaceBefore=6
     )
     body_style = ParagraphStyle(
         'PDF_Body', fontName=PDF_FONT, fontSize=9, leading=13,
@@ -193,13 +191,13 @@ def generate_pdf_from_markdown(markdown_text: str, destination: str) -> str:
         'PDF_Cell', fontName=PDF_FONT, fontSize=8, leading=11, textColor=colors.HexColor('#1E293B')
     )
     table_hdr_style = ParagraphStyle(
-        'PDF_HeaderCell', fontName=PDF_FONT, fontSize=8, leading=11, textColor=colors.HexColor('#0F172A')
+        'PDF_HeaderCell', fontName=PDF_FONT, fontSize=8, leading=11, textColor=colors.HexColor('#065F46')
     )
 
     story = [
-        Paragraph(f"🌊 {destination} 맞춤 여행 청사진 (Travel Blueprint)", h1_style),
-        Paragraph("Google DeepMind Gemini 기반 자율형 여행 아키텍트 리포트", body_style),
-        HRFlowable(width="100%", thickness=1.5, color=colors.HexColor('#0284C7'), spaceBefore=4, spaceAfter=12)
+        Paragraph(f"🌿 {destination} 맞춤 여행 일정표", h1_style),
+        Paragraph("Google DeepMind Gemini 기반 AI 맞춤 여행 플래너 리포트", body_style),
+        HRFlowable(width="100%", thickness=1.5, color=colors.HexColor('#10B981'), spaceBefore=4, spaceAfter=12)
     ]
 
     lines = markdown_text.split('\n')
@@ -212,7 +210,7 @@ def generate_pdf_from_markdown(markdown_text: str, destination: str) -> str:
 
         if line.startswith("# "):
             story.append(Paragraph(line[2:].strip(), h1_style))
-            story.append(HRFlowable(width="100%", thickness=1, color=colors.HexColor('#BAE6FD'), spaceBefore=2, spaceAfter=8))
+            story.append(HRFlowable(width="100%", thickness=1, color=colors.HexColor('#A7F3D0'), spaceBefore=2, spaceAfter=8))
         elif line.startswith("## "):
             story.append(Paragraph(line[3:].strip(), h2_style))
         elif line.startswith("### "):
@@ -226,7 +224,7 @@ def generate_pdf_from_markdown(markdown_text: str, destination: str) -> str:
                     cells = [c.strip() for c in row_line.strip('|').split('|')]
                     row_cells = []
                     for c in cells:
-                        formatted_c = re.sub(r'\[(.*?)\]\((.*?)\)', r'<a href="\2" color="#0284C7"><u>\1</u></a>', c)
+                        formatted_c = re.sub(r'\[(.*?)\]\((.*?)\)', r'<a href="\2" color="#059669"><u>\1</u></a>', c)
                         formatted_c = re.sub(r'\*\*(.*?)\*\*', r'<b>\1</b>', formatted_c)
                         c_style = table_hdr_style if is_header else table_cell_style
                         row_cells.append(Paragraph(formatted_c, c_style))
@@ -241,8 +239,8 @@ def generate_pdf_from_markdown(markdown_text: str, destination: str) -> str:
                 col_width = 520.0 / num_cols
                 t = Table(table_rows, colWidths=[col_width] * num_cols)
                 t.setStyle(TableStyle([
-                    ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#F1F5F9')),
-                    ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#CBD5E1')),
+                    ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#ECFDF5')),
+                    ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#D1FAE5')),
                     ('VALIGN', (0, 0), (-1, -1), 'TOP'),
                     ('TOPPADDING', (0, 0), (-1, -1), 4),
                     ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
@@ -251,7 +249,7 @@ def generate_pdf_from_markdown(markdown_text: str, destination: str) -> str:
                 story.append(Spacer(1, 8))
             continue
         else:
-            formatted = re.sub(r'\[(.*?)\]\((.*?)\)', r'<a href="\2" color="#0284C7"><u>\1</u></a>', line)
+            formatted = re.sub(r'\[(.*?)\]\((.*?)\)', r'<a href="\2" color="#059669"><u>\1</u></a>', line)
             formatted = re.sub(r'\*\*(.*?)\*\*', r'<b>\1</b>', formatted)
             story.append(Paragraph(formatted, body_style))
         i += 1
